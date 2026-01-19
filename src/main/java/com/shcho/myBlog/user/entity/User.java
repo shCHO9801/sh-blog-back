@@ -56,4 +56,15 @@ public class User extends BaseEntity {
     public void updateProfileImageUrl(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
     }
+
+    public static User of(String username, String encodedPassword, String nickname, String email) {
+        return User.builder()
+                .username(username)
+                .password(encodedPassword)
+                .nickname(nickname)
+                .email(email)
+                .profileImageUrl(null)
+                .role(Role.USER)
+                .build();
+    }
 }
