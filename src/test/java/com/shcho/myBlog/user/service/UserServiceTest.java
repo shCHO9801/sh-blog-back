@@ -19,18 +19,21 @@ import java.util.Optional;
 
 import static com.shcho.myBlog.libs.exception.ErrorCode.*;
 import static com.shcho.myBlog.user.entity.Role.USER;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @DisplayName("User Service Unit Test")
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
-    @Mock private UserRepository userRepository;
-    @Mock private PasswordEncoder passwordEncoder;
-    @Mock private JwtProvider jwtProvider;
-    @InjectMocks private UserService userService;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private JwtProvider jwtProvider;
+    @InjectMocks
+    private UserService userService;
 
     @Test
     @DisplayName("회원가입 성공")
@@ -206,6 +209,34 @@ class UserServiceTest {
         assertEquals(INVALID_USERNAME_OR_PASSWORD, exception.getErrorCode());
         verify(userRepository, times(1)).findByUsername(signInRequest.username());
         verify(passwordEncoder, times(1)).matches(rawPassword, user.getPassword());
+    }
+
+    @Test
+    @DisplayName("회원가입 시 Blog 자동 생성")
+    void signUpCreatesBlog() {
+        // given
+        UserSignUpRequestDto requestDto = createTestRequest();
+
+        when(userRepository.existsByUsername(requestDto.username())).thenReturn(false);
+        when(userRepository.existsByNickname(requestDto.nickname())).thenReturn(false);
+        when(userRepository.existsByEmail(requestDto.email())).thenReturn(false);
+        when(passwordEncoder.encode(requestDto.password())).thenReturn("encodedPassword");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+
+        // when
+        userService.signUp(requestDto);
+
+        // then
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository, times(1)).save(userCaptor.capture());
+
+        User savedUser = userCaptor.getValue();
+
+        assertNotNull(savedUser.getBlog());
+        assertEquals(savedUser, savedUser.getBlog().getUser());
+        assertEquals("", savedUser.getBlog().getIntro());
+        assertEquals(savedUser.getNickname() + "의 블로그", savedUser.getBlog().getTitle());
     }
 
     private UserSignUpRequestDto createTestRequest() {
