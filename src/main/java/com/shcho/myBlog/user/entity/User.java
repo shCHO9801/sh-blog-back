@@ -1,5 +1,6 @@
 package com.shcho.myBlog.user.entity;
 
+import com.shcho.myBlog.blog.entity.Blog;
 import com.shcho.myBlog.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -36,6 +37,16 @@ public class User extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "VARCHAR(50)")
     private Role role;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Blog blog;
+
+    public void setBlog(Blog blog) {
+        this.blog = blog;
+        if (blog != null && blog.getUser() != this) {
+            blog.setUser(this);
+        }
+    }
 
     public void updateUsername(String username) {
         this.username = username;
