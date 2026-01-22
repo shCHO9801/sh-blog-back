@@ -8,12 +8,15 @@ import lombok.RequiredArgsConstructor;
 public enum ErrorCode {
     /* 400 BAD_REQUEST */
 
-    /* 404 NOT_FOUND */
-    USER_NOT_FOUND(404, "USER_001", "유저를 찾을 수 없습니다."),
-
     /* 401 UNAUTHORIZED */
     INVALID_USERNAME_OR_PASSWORD(401, "AUTH_001", "아이디 또는 비밀번호가 올바르지 않습니다."),
+    AUTH_REQUIRED(401, "AUTH_002", "인증이 필요합니다."),
+
     /* 403 FORBIDDEN */
+
+    /* 404 NOT_FOUND */
+    USER_NOT_FOUND(404, "USER_001", "유저를 찾을 수 없습니다."),
+    BLOG_NOT_FOUND(404, "BLOG_001", "블로그를 찾을 수 없습니다."),
 
     /* 409 Conflict*/
     DUPLICATED_USERNAME(409, "USER_003", "이미 사용 중인 아이디 입니다."),
