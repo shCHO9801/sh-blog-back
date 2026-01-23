@@ -36,6 +36,18 @@ public class Blog extends BaseEntity {
         this.user = user;
     }
 
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setIntro(String intro) {
+        this.intro = intro;
+    }
+
+    public void setBannerImageUrl(String bannerImageUrl) {
+        this.bannerImageUrl = bannerImageUrl;
+    }
+
     public static Blog ofDefault(User user) {
         return Blog.builder()
                 .title(user.getNickname() + "의 블로그")

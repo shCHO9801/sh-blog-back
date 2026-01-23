@@ -1,16 +1,15 @@
 package com.shcho.myBlog.blog.controller;
 
 import com.shcho.myBlog.blog.dto.BlogResponseDto;
+import com.shcho.myBlog.blog.dto.BlogUpdateRequestDto;
 import com.shcho.myBlog.blog.entity.Blog;
 import com.shcho.myBlog.blog.service.BlogService;
 import com.shcho.myBlog.user.auth.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/blog")
@@ -33,6 +32,16 @@ public class BlogController {
     ) {
         Blog userBlog = blogService.getUserBlogByNickname(nickname);
         return ResponseEntity.ok(BlogResponseDto.from(userBlog));
+    }
+
+    @PatchMapping("/me")
+    public ResponseEntity<BlogResponseDto> updateMyBlog(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody BlogUpdateRequestDto requestDto
+    ) {
+        Blog updatedBlog = blogService.updateMyBlog(userDetails.getUserId(), requestDto);
+
+        return ResponseEntity.ok(BlogResponseDto.from(updatedBlog));
     }
 
 }

@@ -129,4 +129,47 @@ class BlogServiceTest {
         verify(blogRepository, times(1)).findBlogByUserNicknameFetchUser(nickname);
         verifyNoMoreInteractions(blogRepository);
     }
+
+    @Test
+    @DisplayName("내 블로그 업데이트 성공")
+    void updateMyBlogSuccess() {
+        // given
+        Long userId = 1L;
+
+        User user = User.builder()
+                .userId(userId)
+                .nickname("nickname")
+                .build();
+
+        Blog blog = Blog.builder()
+                .id(1L)
+                .title("old title")
+                .intro("old intro")
+                .bannerImageUrl("old-banner.png")
+                .user(user)
+                .build();
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+
+        var requestDto = new com.shcho.myBlog.blog.dto.BlogUpdateRequestDto(
+                "new title",
+                "new intro",
+                "new-banner.png"
+        );
+
+        // when
+        Blog result = blogService.updateMyBlog(userId, requestDto);
+
+        // then
+        assertNotNull(result);
+        assertEquals("new title", result.getTitle());
+        assertEquals("new intro", result.getIntro());
+        assertEquals("new-banner.png", result.getBannerImageUrl());
+
+        // repo는 조회만 1번 호출되고, save는 호출되지 않는 게 정상(현재 구현 기준)
+        verify(blogRepository, times(1)).findBlogByUserIdFetchUser(userId);
+        verifyNoMoreInteractions(blogRepository);
+    }
+
 }
