@@ -1,5 +1,6 @@
 package com.shcho.myBlog.user.service;
 
+import com.shcho.myBlog.blog.entity.Blog;
 import com.shcho.myBlog.common.util.JwtProvider;
 import com.shcho.myBlog.libs.exception.CustomException;
 import com.shcho.myBlog.user.dto.UserSignInRequestDto;
@@ -49,6 +50,8 @@ public class UserService {
                 nickname,
                 email
         );
+
+        signUpUser.setBlog(Blog.ofDefault(signUpUser));
 
         return userRepository.save(signUpUser);
     }
