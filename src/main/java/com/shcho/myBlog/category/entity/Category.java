@@ -14,7 +14,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Table(
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_category_blog_name", columnNames = {"blog_id", "name"})
+                @UniqueConstraint(
+                        name = "uk_category_blog_name",
+                        columnNames = {"blog_id", "parent_id", "name"}
+                )
         }
 )
 public class Category {
@@ -49,8 +52,13 @@ public class Category {
         return parent == null;
     }
 
-    public void updateCategory(String name, String description) {
+    public void setParent(Category parent) {
+        this.parent = parent;
+    }
+
+    public void updateCategory(String name, String description, Category parent) {
         this.name = name;
         this.description = description;
+        this.parent = parent;
     }
 }

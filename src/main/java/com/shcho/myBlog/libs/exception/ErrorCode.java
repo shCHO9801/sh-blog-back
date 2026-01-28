@@ -9,6 +9,8 @@ public enum ErrorCode {
     /* 400 BAD_REQUEST */
     CATEGORY_PARENT_DEPTH_EXCEEDED(400, "CATEGORY_004", "카테고리는 2단계까지만 생성할 수 있습니다."),
     CATEGORY_CANNOT_HAVE_CHILDREN(400, "CATEGORY_005", "미분류 카테고리는 하위 카테고리를 가질 수 없습니다."),
+    CATEGORY_INVALID_PARENT(400, "CATEGORY_006", "카테고리는 자기 자신을 부모 카테고리로 설정할 수 없습니다." ),
+    DEFAULT_CATEGORY_CAN_NOT_DELETE(400, "CATEGORY_007", "미분류 카테고리는 삭제할 수 없습니다." ),
 
     /* 401 UNAUTHORIZED */
     INVALID_USERNAME_OR_PASSWORD(401, "AUTH_001", "아이디 또는 비밀번호가 올바르지 않습니다."),
@@ -21,6 +23,8 @@ public enum ErrorCode {
     USER_NOT_FOUND(404, "USER_001", "유저를 찾을 수 없습니다."),
     BLOG_NOT_FOUND(404, "BLOG_001", "블로그를 찾을 수 없습니다."),
     CATEGORY_NOT_FOUND(404, "CATEGORY_002", "카테고리를 찾을 수 없습니다."),
+    DEFAULT_CATEGORY_NOT_FOUND(404, "CATEGORY_008", "미분류 카테고리를 찾을 수 없습니다."),
+    PARENT_CATEGORY_NOT_FOUND(404, "CATEGORY_009", "부모 카테고리를 찾을 수 없습니다."),
 
     /* 409 Conflict*/
     DUPLICATED_USERNAME(409, "USER_003", "이미 사용 중인 아이디 입니다."),
