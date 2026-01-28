@@ -2,6 +2,7 @@ package com.shcho.myBlog.category.service;
 
 import com.shcho.myBlog.blog.entity.Blog;
 import com.shcho.myBlog.blog.repository.BlogRepository;
+import com.shcho.myBlog.category.dto.CategoryTreeResponseDto;
 import com.shcho.myBlog.category.dto.CreateCategoryRequestDto;
 import com.shcho.myBlog.category.entity.Category;
 import com.shcho.myBlog.category.repository.CategoryRepository;
@@ -14,6 +15,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static com.shcho.myBlog.libs.exception.ErrorCode.*;
@@ -228,9 +231,177 @@ class CategoryServiceTest {
         assertEquals(BLOG_NOT_FOUND, exception.getErrorCode());
     }
 
+    @Test
+    @DisplayName("내 단일 카테고리 조회 성공")
+    void getMyCategorySuccess() {
+        // given
+        Long userId = 1L;
+        User user = User.builder().userId(userId).nickname("nickname").build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+        Category myCategory = Category.builder().id(1L).blog(blog).build();
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(categoryRepository.findById(myCategory.getId()))
+                .thenReturn(Optional.of(myCategory));
+
+        // when
+        Category myCategoryByCategoryId = categoryService.getMyCategoryByCategoryId(userId, myCategory.getId());
+
+        // then
+        assertNotNull(myCategoryByCategoryId);
+        assertEquals(myCategory, myCategoryByCategoryId);
+    }
+
+    @Test
+    @DisplayName("내 단일 카테고리 조회 실패 - 권한이 없는 카테고리")
+    void getMyCategoryFailedForbidden() {
+        // given
+        User user = User.builder().userId(1L).nickname("nickname").build();
+        User otherUser = User.builder().userId(2L).nickname("otherNickname").build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+        Blog otherBlog = Blog.builder().id(2L).user(otherUser).build();
+        Category otherCategory = Category.builder().id(1L).blog(otherBlog).build();
+
+        when(blogRepository.findBlogByUserIdFetchUser(user.getUserId()))
+                .thenReturn(Optional.of(blog));
+
+        when(categoryRepository.findById(otherCategory.getId()))
+                .thenReturn(Optional.of(otherCategory));
+
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> categoryService.getMyCategoryByCategoryId(user.getUserId(), otherCategory.getId()));
+
+        assertEquals(CATEGORY_FORBIDDEN, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("내 카테고리 트리 조회 성공")
+    void getMyCategoryTreeSuccess() {
+        // given
+        Long userId = 1L;
+        User user = User.builder().userId(userId).nickname("nickname").build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+
+        Category parent1 = Category.builder().id(1L).name("parent1").blog(blog).parent(null).build();
+        Category parent2 = Category.builder().id(2L).name("parent2").blog(blog).parent(null).build();
+
+        List<Category> categories = new ArrayList<>();
+        categories.add(parent1);
+        categories.add(parent2);
+
+        // parent1 children (정렬 검증을 위해 일부러 역순으로 넣음)
+        categories.add(Category.builder().id(3L).name("b").blog(blog).parent(parent1).build());
+        categories.add(Category.builder().id(4L).name("a").blog(blog).parent(parent1).build());
+
+        // parent2 child
+        categories.add(Category.builder().id(5L).name("child3").blog(blog).parent(parent2).build());
+
+        when(blogRepository.findBlogByUserIdFetchUser(user.getUserId()))
+                .thenReturn(Optional.of(blog));
+        when(categoryRepository.findAllByBlogIdOrderByNameAsc(blog.getId()))
+                .thenReturn(categories);
+
+        // when
+        List<CategoryTreeResponseDto> myCategoryTree = categoryService.getMyCategoryTree(user.getUserId());
+
+        // then
+        assertNotNull(myCategoryTree);
+        assertEquals(2, myCategoryTree.size());
+
+        CategoryTreeResponseDto dtoParent1 = findRootByName(myCategoryTree, "parent1");
+        CategoryTreeResponseDto dtoParent2 = findRootByName(myCategoryTree, "parent2");
+
+        assertEquals(2, dtoParent1.children().size());
+        assertEquals(1, dtoParent2.children().size());
+
+        // parent1 children 정렬 검증: a, b 순서여야 함
+        assertEquals("a", dtoParent1.children().get(0).name());
+        assertEquals("b", dtoParent1.children().get(1).name());
+
+        // parent2 child 검증
+        assertEquals("child3", dtoParent2.children().get(0).name());
+    }
+
+    @Test
+    @DisplayName("내 root 카테고리 조회 성공")
+    void getMyRootCategoriesSuccess() {
+        // given
+        Long userId = 1L;
+        User user = User.builder().userId(userId).nickname("nickname").build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+
+        Category root1 = Category.builder().id(1L).name("A").blog(blog).parent(null).build();
+        Category root2 = Category.builder().id(2L).name("B").blog(blog).parent(null).build();
+
+        List<Category> roots = List.of(root1, root2);
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(categoryRepository.findAllByBlogIdAndParentIsNullOrderByNameAsc(blog.getId()))
+                .thenReturn(roots);
+
+        // when
+        List<Category> result = categoryService.getMyRootCategories(userId);
+
+        // then
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals("A", result.get(0).getName());
+        assertEquals("B", result.get(1).getName());
+    }
+
+    @Test
+    @DisplayName("닉네임으로 카테고리 트리 조회 성공")
+    void getCategoryTreeByNicknameSuccess() {
+        // given
+        String nickname = "nickname";
+
+        User user = User.builder().userId(1L).nickname(nickname).build();
+        Blog blog = Blog.builder().id(10L).user(user).build();
+
+        Category parent1 = Category.builder().id(1L).name("parent1").blog(blog).parent(null).build();
+        Category parent2 = Category.builder().id(2L).name("parent2").blog(blog).parent(null).build();
+
+        List<Category> categories = new ArrayList<>();
+        categories.add(parent1);
+        categories.add(parent2);
+
+        // parent1 children (정렬 검증)
+        categories.add(Category.builder().id(3L).name("b").blog(blog).parent(parent1).build());
+        categories.add(Category.builder().id(4L).name("a").blog(blog).parent(parent1).build());
+
+        // parent2 child
+        categories.add(Category.builder().id(5L).name("child3").blog(blog).parent(parent2).build());
+
+        when(blogRepository.findBlogByUserNicknameFetchUser(nickname))
+                .thenReturn(Optional.of(blog));
+        when(categoryRepository.findAllByBlogIdOrderByNameAsc(blog.getId()))
+                .thenReturn(categories);
+
+        // when
+        List<CategoryTreeResponseDto> result = categoryService.getCategoryTreeByNickname(nickname);
+
+        // then
+        assertNotNull(result);
+        assertEquals(2, result.size());
+
+        CategoryTreeResponseDto dtoParent1 = findRootByName(result, "parent1");
+        assertEquals(2, dtoParent1.children().size());
+        assertEquals("a", dtoParent1.children().get(0).name());
+        assertEquals("b", dtoParent1.children().get(1).name());
+    }
 
     private CreateCategoryRequestDto createTestRequest(String name, String description, Long parentId) {
         return new CreateCategoryRequestDto(name, description, parentId);
     }
 
+    private CategoryTreeResponseDto findRootByName(List<CategoryTreeResponseDto> tree, String rootName) {
+        return tree.stream()
+                .filter(r -> rootName.equals(r.name()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("root not found: " + rootName));
+    }
 }
