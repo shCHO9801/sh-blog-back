@@ -4,6 +4,7 @@ import com.shcho.myBlog.blog.entity.Blog;
 import com.shcho.myBlog.blog.repository.BlogRepository;
 import com.shcho.myBlog.category.dto.CategoryTreeResponseDto;
 import com.shcho.myBlog.category.dto.CreateCategoryRequestDto;
+import com.shcho.myBlog.category.dto.UpdateCategoryRequest;
 import com.shcho.myBlog.category.entity.Category;
 import com.shcho.myBlog.category.repository.CategoryRepository;
 import com.shcho.myBlog.libs.exception.CustomException;
@@ -41,19 +42,11 @@ public class CategoryService {
             parent = categoryRepository.findById(requestDto.parentId())
                     .orElseThrow(() -> new CustomException(CATEGORY_NOT_FOUND));
 
-            if (!parent.getBlog().getId().equals(myBlog.getId())) {
-                throw new CustomException(CATEGORY_FORBIDDEN);
-            }
-
+            validateCategoryOwnership(parent.getBlog().getId(), myBlog.getId());
             // parent는 root 여야 함
-            if (parent.getParent() != null) {
-                throw new CustomException(CATEGORY_PARENT_DEPTH_EXCEEDED);
-            }
-
+            validateCategoryRoot(parent);
             // 미분류 카테고리는 자식을 가질 수 없음
-            if (DEFAULT_CATEGORY_NAME.equals(parent.getName())) {
-                throw new CustomException(CATEGORY_CANNOT_HAVE_CHILDREN);
-            }
+            validateCategoryIsNotDefault(parent);
         }
 
         Long parentId = (parent == null) ? null : parent.getId();
@@ -99,6 +92,105 @@ public class CategoryService {
                 .orElseThrow(() -> new CustomException(BLOG_NOT_FOUND));
 
         return buildTree(getBlogByNickname.getId());
+    }
+
+    @Transactional
+    public Category updateCategory(Long userId, Long categoryId, UpdateCategoryRequest request) {
+        Blog myBlog = blogRepository.findBlogByUserIdFetchUser(userId)
+                .orElseThrow(() -> new CustomException(BLOG_NOT_FOUND));
+
+        Category myCategory = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new CustomException(CATEGORY_NOT_FOUND));
+
+        validateCategoryOwnership(myCategory.getBlog().getId(), myBlog.getId());
+
+        String name = request.name().trim();
+        String description = request.description();
+
+        Long currentParentId = (myCategory.getParent() == null) ? null : myCategory.getParent().getId();
+        Long requestedParentId = request.parentId();
+
+        Category newParent;
+
+        if (requestedParentId == null) {
+            newParent = null;
+        } else {
+            if (requestedParentId.equals(categoryId)) {
+                throw new CustomException(CATEGORY_INVALID_PARENT);
+            }
+
+            if (requestedParentId.equals(currentParentId)) {
+                newParent = myCategory.getParent();
+            } else {
+                newParent = categoryRepository.findById(requestedParentId)
+                        .orElseThrow(() -> new CustomException(PARENT_CATEGORY_NOT_FOUND));
+
+                validateCategoryOwnership(newParent.getBlog().getId(), myBlog.getId());
+                validateCategoryRoot(newParent);
+                validateCategoryIsNotDefault(newParent);
+            }
+        }
+
+        Long newParentId = (newParent == null) ? null : newParent.getId();
+
+        if (categoryRepository.existsByBlogIdAndParentIdAndNameAndIdNot(
+                myBlog.getId(), newParentId, name, myCategory.getId())) {
+            throw new CustomException(DUPLICATED_CATEGORY_NAME);
+        }
+
+        myCategory.updateCategory(name, description, newParent);
+        return myCategory;
+    }
+
+    @Transactional
+    public Long deleteMyCategory(Long userId, Long categoryId) {
+        Blog myBlog = blogRepository.findBlogByUserIdFetchUser(userId)
+                .orElseThrow(() -> new CustomException(BLOG_NOT_FOUND));
+
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new CustomException(CATEGORY_NOT_FOUND));
+
+        validateCategoryOwnership(category.getBlog().getId(), myBlog.getId());
+
+        // '미분류' 카테고리 삭제 불가
+        if (DEFAULT_CATEGORY_NAME.equals(category.getName())) {
+            throw new CustomException(DEFAULT_CATEGORY_CAN_NOT_DELETE);
+        }
+
+        // 루트 삭제면 자식들을 '미분류'로 전환
+        if (category.isRoot()) {
+            Category defaultCategory = categoryRepository.findByBlogIdAndName(myBlog.getId(), DEFAULT_CATEGORY_NAME)
+                    .orElseThrow(() -> new CustomException(DEFAULT_CATEGORY_NOT_FOUND));
+
+            List<Category> children = categoryRepository.findAllByBlogIdAndParentId(myBlog.getId(), categoryId);
+
+            for (Category child : children) {
+                child.setParent(defaultCategory);
+            }
+
+            categoryRepository.saveAll(children);
+        }
+
+        categoryRepository.delete(category);
+        return categoryId;
+    }
+
+    private void validateCategoryIsNotDefault(Category newParent) {
+        if (DEFAULT_CATEGORY_NAME.equals(newParent.getName())) {
+            throw new CustomException(CATEGORY_CANNOT_HAVE_CHILDREN);
+        }
+    }
+
+    private void validateCategoryOwnership(Long categoryBlogId, Long blogId) {
+        if (!categoryBlogId.equals(blogId)) {
+            throw new CustomException(CATEGORY_FORBIDDEN);
+        }
+    }
+
+    private void validateCategoryRoot(Category category) {
+        if (category.getParent() != null) {
+            throw new CustomException(CATEGORY_PARENT_DEPTH_EXCEEDED);
+        }
     }
 
     private List<CategoryTreeResponseDto> buildTree(Long blogId) {

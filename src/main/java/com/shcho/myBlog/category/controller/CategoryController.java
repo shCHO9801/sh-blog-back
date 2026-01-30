@@ -1,9 +1,6 @@
 package com.shcho.myBlog.category.controller;
 
-import com.shcho.myBlog.category.dto.CategoryResponseDto;
-import com.shcho.myBlog.category.dto.CategoryTreeResponseDto;
-import com.shcho.myBlog.category.dto.CreateCategoryRequestDto;
-import com.shcho.myBlog.category.dto.CreateCategoryResponseDto;
+import com.shcho.myBlog.category.dto.*;
 import com.shcho.myBlog.category.entity.Category;
 import com.shcho.myBlog.category.service.CategoryService;
 import com.shcho.myBlog.user.auth.CustomUserDetails;
@@ -71,5 +68,24 @@ public class CategoryController {
                 categoryService.getCategoryTreeByNickname(nickname);
 
         return ResponseEntity.ok(getBlogCategory);
+    }
+
+    @PatchMapping("/my/{categoryId}")
+    public ResponseEntity<CategoryResponseDto> updateMyCategory(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long categoryId,
+            @RequestBody @Valid UpdateCategoryRequest request
+    ) {
+        Category updatedCategory = categoryService.updateCategory(userDetails.getUserId(), categoryId, request);
+        return ResponseEntity.ok(CategoryResponseDto.of(updatedCategory));
+    }
+
+    @DeleteMapping(("/my/{categoryId}"))
+    public ResponseEntity<DeleteCategoryResponseDto> deleteMyCategory(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long categoryId
+    ) {
+        Long deletedCategoryId = categoryService.deleteMyCategory(userDetails.getUserId(), categoryId);
+        return ResponseEntity.ok(DeleteCategoryResponseDto.of(deletedCategoryId));
     }
 }
