@@ -1,5 +1,6 @@
 package com.shcho.myBlog.user.service;
 
+import com.shcho.myBlog.category.repository.CategoryRepository;
 import com.shcho.myBlog.common.util.JwtProvider;
 import com.shcho.myBlog.libs.exception.CustomException;
 import com.shcho.myBlog.user.dto.UserSignInRequestDto;
@@ -32,6 +33,8 @@ class UserServiceTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private JwtProvider jwtProvider;
+    @Mock
+    private CategoryRepository categoryRepository;
     @InjectMocks
     private UserService userService;
 
