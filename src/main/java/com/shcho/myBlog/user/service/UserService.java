@@ -1,6 +1,8 @@
 package com.shcho.myBlog.user.service;
 
 import com.shcho.myBlog.blog.entity.Blog;
+import com.shcho.myBlog.category.entity.Category;
+import com.shcho.myBlog.category.repository.CategoryRepository;
 import com.shcho.myBlog.common.util.JwtProvider;
 import com.shcho.myBlog.libs.exception.CustomException;
 import com.shcho.myBlog.user.dto.UserSignInRequestDto;
@@ -18,9 +20,12 @@ import static com.shcho.myBlog.libs.exception.ErrorCode.*;
 @RequiredArgsConstructor
 public class UserService {
 
+    private static final String DEFAULT_CATEGORY_NAME = "미분류";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
+    private final CategoryRepository categoryRepository;
 
     @Transactional
     public User signUp(UserSignUpRequestDto requestDto) {
@@ -53,7 +58,13 @@ public class UserService {
 
         signUpUser.setBlog(Blog.ofDefault(signUpUser));
 
-        return userRepository.save(signUpUser);
+        User savedUser = userRepository.save(signUpUser);
+
+        Blog savedBlog = savedUser.getBlog();
+        Category defaultCategory = Category.of(savedBlog, null, DEFAULT_CATEGORY_NAME, "");
+        categoryRepository.save(defaultCategory);
+
+        return savedUser;
     }
 
     public User signIn(UserSignInRequestDto requestDto) {

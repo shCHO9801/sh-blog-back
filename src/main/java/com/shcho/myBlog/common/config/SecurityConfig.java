@@ -37,7 +37,8 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/api/auth/**",
-                                "/api/blog/public/**"
+                                "/api/blog/public/**",
+                                "/api/category/public/**"
                         ).permitAll()
                         // 그 외 경로는 인증 필요
                         .anyRequest().authenticated()
