@@ -162,10 +162,6 @@ public class CategoryService {
             Category defaultCategory = categoryRepository.findByBlogIdAndName(myBlog.getId(), DEFAULT_CATEGORY_NAME)
                     .orElseThrow(() -> new CustomException(DEFAULT_CATEGORY_NOT_FOUND));
 
-            if(defaultCategory.getId().equals(categoryId)) {
-                throw new CustomException(DEFAULT_CATEGORY_NOT_FOUND);
-            }
-
             List<Category> children = categoryRepository.findAllByBlogIdAndParentId(myBlog.getId(), categoryId);
 
             for (Category child : children) {

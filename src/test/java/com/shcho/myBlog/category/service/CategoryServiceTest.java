@@ -4,6 +4,7 @@ import com.shcho.myBlog.blog.entity.Blog;
 import com.shcho.myBlog.blog.repository.BlogRepository;
 import com.shcho.myBlog.category.dto.CategoryTreeResponseDto;
 import com.shcho.myBlog.category.dto.CreateCategoryRequestDto;
+import com.shcho.myBlog.category.dto.UpdateCategoryRequest;
 import com.shcho.myBlog.category.entity.Category;
 import com.shcho.myBlog.category.repository.CategoryRepository;
 import com.shcho.myBlog.libs.exception.CustomException;
@@ -16,12 +17,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 import static com.shcho.myBlog.libs.exception.ErrorCode.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @DisplayName("Category Service Unit Test")
@@ -392,6 +395,318 @@ class CategoryServiceTest {
         assertEquals(2, dtoParent1.children().size());
         assertEquals("a", dtoParent1.children().get(0).name());
         assertEquals("b", dtoParent1.children().get(1).name());
+    }
+
+    @Test
+    @DisplayName("카테고리 업데이트 성공")
+    void updateCategorySuccess() {
+        // given
+        Long userId = 1L;
+        User user = User.builder().userId(userId).nickname("nickname").build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+
+        Category rootCategory = Category.builder().id(1L).name("root").blog(blog).parent(null).build();
+        Category category = Category.builder().id(2L).name("A").blog(blog).parent(rootCategory).build();
+
+        UpdateCategoryRequest request = new UpdateCategoryRequest("updatedName", "updateDescription", rootCategory.getId());
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(categoryRepository.findById(2L))
+                .thenReturn(Optional.of(category));
+        when(categoryRepository.existsByBlogIdAndParentIdAndNameAndIdNot(blog.getId(), request.parentId(), request.name().trim(), category.getId()))
+                .thenReturn(false);
+
+        // when
+        Category updatedCategory = categoryService.updateCategory(userId, category.getId(), request);
+
+        // then
+        assertNotNull(updatedCategory);
+        assertEquals(request.name().trim(), updatedCategory.getName());
+        assertEquals(request.description(), updatedCategory.getDescription());
+    }
+
+    @Test
+    @DisplayName("카테고리 수정 성공 - root 카테고리 변경")
+    void updateCategoryChangeRootCategorySuccess() {
+        // given
+        Long userId = 1L;
+        User user = User.builder().userId(userId).nickname("nickname").build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+
+        Category rootCategory = Category.builder().id(1L).name("A").blog(blog).parent(null).build();
+        Category category = Category.builder().id(2L).name("B").blog(blog).parent(null).build();
+
+        UpdateCategoryRequest request = new UpdateCategoryRequest("updatedName", "updateDescription", 1L);
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(categoryRepository.findById(2L))
+                .thenReturn(Optional.of(category));
+        when(categoryRepository.findById(1L))
+                .thenReturn(Optional.of(rootCategory));
+        when(categoryRepository.existsByBlogIdAndParentIdAndNameAndIdNot(blog.getId(), request.parentId(), request.name().trim(), category.getId()))
+                .thenReturn(false);
+
+
+        // when
+        Category updatedCategory = categoryService.updateCategory(userId, category.getId(), request);
+
+        // then
+        assertNotNull(updatedCategory);
+        assertEquals(request.name().trim(), updatedCategory.getName());
+        assertEquals(request.description(), updatedCategory.getDescription());
+        assertEquals(rootCategory.getId(), updatedCategory.getParent().getId());
+    }
+
+    @Test
+    @DisplayName("카테고리 수정 실패 - root 카테고리를 자기자신으로 지정")
+    void updateCategoryChangeRootCategoryFailedCategoryInvalidParent() {
+        // given
+        Long userId = 1L;
+        User user = User.builder().userId(userId).nickname("nickname").build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+
+        Category category = Category.builder().id(2L).name("B").blog(blog).parent(null).build();
+
+        UpdateCategoryRequest request = new UpdateCategoryRequest("updatedName", "updateDescription", 2L);
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(categoryRepository.findById(2L))
+                .thenReturn(Optional.of(category));
+
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> categoryService.updateCategory(userId, category.getId(), request));
+
+        assertEquals(CATEGORY_INVALID_PARENT, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("카테고리 수정 실패 - 내 블로그가 아니면 권한 없음")
+    void updateCategoryFailedForbiddenWhenNotMyBlog() {
+        // given
+        Long userId = 1L;
+
+        User user = User.builder().userId(userId).nickname("me").build();
+        Blog myBlog = Blog.builder().id(1L).user(user).build();
+        Blog otherBlog = Blog.builder().id(2L).build();
+        Category otherCategory = Category.builder()
+                .id(10L)
+                .name("other")
+                .blog(otherBlog)
+                .parent(null)
+                .build();
+
+        UpdateCategoryRequest request = new UpdateCategoryRequest("updatedName", "desc", null);
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(myBlog));
+        when(categoryRepository.findById(otherCategory.getId()))
+                .thenReturn(Optional.of(otherCategory));
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> categoryService.updateCategory(userId, otherCategory.getId(), request));
+
+        assertEquals(CATEGORY_FORBIDDEN, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("카테고리 수정 실패 - 부모 카테고리 조회 실패")
+    void updateCategoryFailedParentCategoryNotFound() {
+        // given
+        Long userId = 1L;
+
+        User user = User.builder().userId(userId).nickname("nickname").build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+
+        Category category = Category.builder()
+                .id(2L)
+                .name("B")
+                .blog(blog)
+                .parent(null)
+                .build();
+
+        Long requestedParentId = 999L;
+        UpdateCategoryRequest request = new UpdateCategoryRequest("updatedName", "desc", requestedParentId);
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(categoryRepository.findById(category.getId()))
+                .thenReturn(Optional.of(category));
+        when(categoryRepository.findById(requestedParentId))
+                .thenReturn(Optional.empty());
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> categoryService.updateCategory(userId, category.getId(), request));
+
+        assertEquals(PARENT_CATEGORY_NOT_FOUND, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("카테고리 수정 실패 - 부모 카테고리가 root가 아니면 2단계 제한")
+    void updateCategoryFailedParentNotRoot() {
+        // given
+        Long userId = 1L;
+
+        User user = User.builder().userId(userId).nickname("nickname").build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+
+        Category category = Category.builder().id(2L).name("B").blog(blog).parent(null).build();
+
+        Category grandParent = Category.builder().id(100L).name("grand").blog(blog).parent(null).build();
+        Category parentNotRoot = Category.builder().id(101L).name("parent").blog(blog).parent(grandParent).build();
+
+        UpdateCategoryRequest request = new UpdateCategoryRequest("updatedName", "desc", parentNotRoot.getId());
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(categoryRepository.findById(category.getId()))
+                .thenReturn(Optional.of(category));
+        when(categoryRepository.findById(parentNotRoot.getId()))
+                .thenReturn(Optional.of(parentNotRoot));
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> categoryService.updateCategory(userId, category.getId(), request));
+
+        assertEquals(CATEGORY_PARENT_DEPTH_EXCEEDED, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("카테고리 수정 실패 - 미분류 카테고리는 부모가 될 수 없음")
+    void updateCategoryFailedParentIsDefaultCategory() {
+        // given
+        Long userId = 1L;
+
+        User user = User.builder().userId(userId).nickname("nickname").build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+
+        Category category = Category.builder().id(2L).name("B").blog(blog).parent(null).build();
+        Category defaultParent = Category.builder().id(3L).name("미분류").blog(blog).parent(null).build();
+
+        UpdateCategoryRequest request = new UpdateCategoryRequest("updatedName", "desc", defaultParent.getId());
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(categoryRepository.findById(category.getId()))
+                .thenReturn(Optional.of(category));
+        when(categoryRepository.findById(defaultParent.getId()))
+                .thenReturn(Optional.of(defaultParent));
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> categoryService.updateCategory(userId, category.getId(), request));
+
+        assertEquals(CATEGORY_CANNOT_HAVE_CHILDREN, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("카테고리 수정 실패 - 중복 이름이면 실패")
+    void updateCategoryFailedDuplicatedName() {
+        // given
+        Long userId = 1L;
+
+        User user = User.builder().userId(userId).nickname("nickname").build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+
+        Category category = Category.builder().id(2L).name("B").blog(blog).parent(null).build();
+
+        UpdateCategoryRequest request = new UpdateCategoryRequest("duplicated", "desc", null);
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(categoryRepository.findById(category.getId()))
+                .thenReturn(Optional.of(category));
+        when(categoryRepository.existsByBlogIdAndParentIdAndNameAndIdNot(
+                blog.getId(), null, request.name().trim(), category.getId()
+        )).thenReturn(true);
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> categoryService.updateCategory(userId, category.getId(), request));
+
+        assertEquals(DUPLICATED_CATEGORY_NAME, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("내 카테고리 삭제 성공")
+    void deleteCategorySuccess() {
+        // given
+        Long userId = 1L;
+        User user = User.builder().userId(userId).nickname("nickname").build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+        Category rootCategory = Category.builder().id(1L).name("root").blog(blog).parent(null).build();
+        Category category = Category.builder().id(2L).name("child").blog(blog).parent(rootCategory).build();
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+        .thenReturn(Optional.of(blog));
+        when(categoryRepository.findById(category.getId()))
+        .thenReturn(Optional.of(category));
+
+        // when
+        Long deletedCategoryId = categoryService.deleteMyCategory(userId, category.getId());
+
+        // then
+        assertEquals(category.getId(), deletedCategoryId);
+    }
+
+    @Test
+    @DisplayName("내 카테고리 삭제 성공 - 루트 카테고리 삭제시 자식들 미분류로 전환")
+    void deletedCategorySuccessRootCategory(){
+        // given
+        Long userId = 1L;
+        User user = User.builder().userId(userId).nickname("nickname").build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+
+        Category defaultCategory = Category.builder().id(1L).name("미분류").blog(blog).parent(null).build();
+        Category root = Category.builder().id(2L).name("root").blog(blog).parent(null).build();
+        Category child1 = Category.builder().id(3L).name("child1").blog(blog).parent(root).build();
+        Category child2 = Category.builder().id(4L).name("child2").blog(blog).parent(root).build();
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+        .thenReturn(Optional.of(blog));
+        when(categoryRepository.findById(root.getId()))
+                .thenReturn(Optional.of(root));
+        when(categoryRepository.findByBlogIdAndName(blog.getId(), "미분류"))
+                .thenReturn(Optional.of(defaultCategory));
+        when(categoryRepository.findAllByBlogIdAndParentId(blog.getId(), root.getId()))
+                .thenReturn(Arrays.asList(child1, child2));
+
+        // when
+        Long deletedCategoryId = categoryService.deleteMyCategory(userId, root.getId());
+
+        // then
+        assertEquals(root.getId(), deletedCategoryId);
+        assertEquals(defaultCategory.getId(), child1.getParent().getId());
+        assertEquals(defaultCategory.getId(), child2.getParent().getId());
+
+        verify(categoryRepository).delete(root);
+    }
+
+    @Test
+    @DisplayName("내 카테고리 삭제 실패 - 미분류 카테고리는 삭제할 수 없음")
+    void deleteCategoryFailed() {
+        Long userId = 1L;
+        User user = User.builder().userId(userId).nickname("nickname").build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+        Category defaultCategory = Category.builder().id(1L).name("미분류").blog(blog).parent(null).build();
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(categoryRepository.findById(defaultCategory.getId()))
+                .thenReturn(Optional.of(defaultCategory));
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> categoryService.deleteMyCategory(userId, defaultCategory.getId()));
+
+        assertEquals(DEFAULT_CATEGORY_CAN_NOT_DELETE, exception.getErrorCode());
+
     }
 
     private CreateCategoryRequestDto createTestRequest(String name, String description, Long parentId) {
