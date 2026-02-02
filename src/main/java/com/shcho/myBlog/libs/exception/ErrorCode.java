@@ -11,6 +11,7 @@ public enum ErrorCode {
     CATEGORY_CANNOT_HAVE_CHILDREN(400, "CATEGORY_005", "미분류 카테고리는 하위 카테고리를 가질 수 없습니다."),
     CATEGORY_INVALID_PARENT(400, "CATEGORY_006", "카테고리는 자기 자신을 부모 카테고리로 설정할 수 없습니다." ),
     DEFAULT_CATEGORY_CAN_NOT_DELETE(400, "CATEGORY_007", "미분류 카테고리는 삭제할 수 없습니다." ),
+    POST_CAN_NOT_USE_NON_LEAF_CATEGORY(400, "POST_001", "게시글은 리프 카테고리가 아니면 사용할 수 없습니다."),
 
     /* 401 UNAUTHORIZED */
     INVALID_USERNAME_OR_PASSWORD(401, "AUTH_001", "아이디 또는 비밀번호가 올바르지 않습니다."),

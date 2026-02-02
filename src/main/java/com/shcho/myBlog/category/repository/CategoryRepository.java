@@ -19,4 +19,8 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findAllByBlogIdAndParentId(Long blogId, Long parentId);
 
     Optional<Category> findByBlogIdAndName(Long blogId, String name);
+
+    boolean existsByParent_Id(Long id);
+
+    Optional<Category> findByIdAndBlogId(Long id, Long blogId);
 }
