@@ -86,4 +86,19 @@ public class PostService {
     public Page<PostThumbnailResponseDto> getPostsByUserNicknameAndCategoryId(String nickname, Long categoryId, Pageable pageable) {
         return postQueryRepository.findPostThumbnailsByNicknameAndCategoryId(nickname, categoryId, pageable);
     }
+
+    public Page<PostThumbnailResponseDto> getMyAllPosts(Long userId, Boolean publicPost, Pageable pageable) {
+        Blog myBlog = blogRepository.findBlogByUserIdFetchUser(userId)
+                .orElseThrow(() -> new CustomException(BLOG_NOT_FOUND));
+
+        return postQueryRepository.getMyAllPosts(myBlog.getId(), publicPost, pageable);
+    }
+
+    public Post getMyPostByPostId(Long userId, Long postId) {
+        Blog myBlog = blogRepository.findBlogByUserIdFetchUser(userId)
+                .orElseThrow(() -> new CustomException(BLOG_NOT_FOUND));
+
+        return postQueryRepository.getMyPostByBlog(myBlog.getId(), postId)
+                .orElseThrow(() -> new CustomException(POST_NOT_FOUND));
+    }
 }

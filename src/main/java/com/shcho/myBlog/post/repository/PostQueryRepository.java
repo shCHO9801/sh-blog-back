@@ -50,7 +50,7 @@ public class PostQueryRepository {
 
         BooleanExpression[] conditions = new BooleanExpression[]{
                 nicknameEq(nickname),
-                titleContains(keyword),
+                keywordInTitleOrContent(keyword),
                 isPublicOnly()
         };
 
@@ -86,7 +86,9 @@ public class PostQueryRepository {
         return Optional.ofNullable(result);
     }
 
-    public Page<PostThumbnailResponseDto> findPostThumbnailsByNicknameAndCategoryId(String nickname, Long categoryId, Pageable pageable) {
+    public Page<PostThumbnailResponseDto> findPostThumbnailsByNicknameAndCategoryId(
+            String nickname, Long categoryId, Pageable pageable
+    ) {
 
         BooleanExpression[] conditions = new BooleanExpression[]{
                 nicknameEq(nickname),
@@ -108,6 +110,41 @@ public class PostQueryRepository {
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
     }
 
+    public Page<PostThumbnailResponseDto> getMyAllPosts(Long blogId, Boolean publicPost, Pageable pageable) {
+        BooleanExpression[] conditions = new BooleanExpression[]{
+                blogEqBlogId(blogId),
+                isPublicEq(publicPost)
+        };
+
+        List<PostThumbnailResponseDto> content = baseThumbnailQueryWithoutUserJoin()
+                .where(conditions)
+                .orderBy(post.createdAt.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        JPAQuery<Long> countQuery = baseCountQueryWithoutUserJoin()
+                .where(conditions);
+
+        return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
+    }
+
+    public Optional<Post> getMyPostByBlog(Long blogId, Long postId) {
+        BooleanExpression[] conditions = new BooleanExpression[]{
+                blogEqBlogId(blogId),
+                postEqPostId(postId)
+        };
+
+        Post result = queryFactory
+                .selectFrom(post)
+                .join(post.blog, blog).fetchJoin()
+                .join(post.category, category).fetchJoin()
+                .where(conditions)
+                .fetchOne();
+
+        return Optional.ofNullable(result);
+    }
+
     private BooleanExpression nicknameEq(String nickname) {
         return user.nickname.eq(nickname);
     }
@@ -116,16 +153,29 @@ public class PostQueryRepository {
         return post.isPublic.isTrue();
     }
 
-    private BooleanExpression titleContains(String keyword) {
-        return post.title.contains(keyword);
-    }
-
     private BooleanExpression categoryIdEq(Long categoryId) {
         return category.id.eq(categoryId);
     }
 
     private BooleanExpression categoryBlogEqPostBlog() {
         return category.blog.eq(post.blog);
+    }
+
+    private BooleanExpression blogEqBlogId(Long blogId) {
+        return post.blog.id.eq(blogId);
+    }
+
+    private BooleanExpression postEqPostId(Long postId) {
+        return post.id.eq(postId);
+    }
+
+    private BooleanExpression keywordInTitleOrContent(String keyword) {
+        return post.title.contains(keyword)
+                .or(post.content.isNotNull().and(post.content.contains(keyword)));
+    }
+
+    private BooleanExpression isPublicEq(Boolean isPublic) {
+        return isPublic == null ? null : post.isPublic.eq(isPublic);
     }
 
     private JPAQuery<PostThumbnailResponseDto> baseThumbnailQuery() {
@@ -142,12 +192,32 @@ public class PostQueryRepository {
                 .join(blog.user, user);
     }
 
+    private JPAQuery<PostThumbnailResponseDto> baseThumbnailQueryWithoutUserJoin() {
+        return queryFactory
+                .select(Projections.constructor(
+                        PostThumbnailResponseDto.class,
+                        post.id,
+                        post.title,
+                        post.isPublic,
+                        post.createdAt
+                ))
+                .from(post)
+                .join(post.blog, blog);
+    }
+
     private JPAQuery<Long> baseCountQuery() {
         return queryFactory
                 .select(post.count())
                 .from(post)
                 .join(post.blog, blog)
                 .join(blog.user, user);
+    }
+
+    private JPAQuery<Long> baseCountQueryWithoutUserJoin() {
+        return queryFactory
+                .select(post.count())
+                .from(post)
+                .join(post.blog, blog);
     }
 
     private JPAQuery<PostThumbnailResponseDto> baseThumbnailQueryWithCategoryJoin() {

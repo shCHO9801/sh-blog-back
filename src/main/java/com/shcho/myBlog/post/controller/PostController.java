@@ -72,4 +72,24 @@ public class PostController {
                 postService.getPostsByUserNicknameAndCategoryId(nickname, categoryId, pageable);
         return ResponseEntity.ok(PagedResponseDto.from(getAllPostsByCategoryId));
     }
+
+    @GetMapping("/my")
+    public ResponseEntity<PagedResponseDto<PostThumbnailResponseDto>> getMyPosts(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(required = false) Boolean publicPost,
+            Pageable pageable
+    ) {
+        Page<PostThumbnailResponseDto> getMyAllPosts =
+                postService.getMyAllPosts(userDetails.getUserId(), publicPost, pageable);
+        return ResponseEntity.ok(PagedResponseDto.from(getMyAllPosts));
+    }
+
+    @GetMapping("/my/posts/{postId}")
+    public ResponseEntity<PostResponseDto> getMyPostByPostId(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long postId
+    ) {
+        Post post = postService.getMyPostByPostId(userDetails.getUserId(), postId);
+        return ResponseEntity.ok(PostResponseDto.from(post));
+    }
 }
