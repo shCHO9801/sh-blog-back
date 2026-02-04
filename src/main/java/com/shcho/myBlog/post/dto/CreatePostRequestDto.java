@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 public record CreatePostRequestDto (
         @NotBlank String title,
         String content,
-        Long categoryId
+        Long categoryId,
+        boolean isPublic
 ){
 }

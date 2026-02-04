@@ -4,24 +4,24 @@ import com.shcho.myBlog.post.entity.Post;
 
 import java.time.LocalDateTime;
 
-public record CreatePostResponseDto(
+public record PostResponseDto(
         Long postId,
-        Long blogId,
         Long categoryId,
         String title,
         String content,
         boolean isPublic,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {
-    public static CreatePostResponseDto from(Post post) {
-        return new CreatePostResponseDto(
+    public static PostResponseDto from(Post post) {
+        return new PostResponseDto(
                 post.getId(),
-                post.getBlog().getId(),
                 post.getCategory().getId(),
                 post.getTitle(),
                 post.getContent(),
                 post.isPublic(),
-                post.getCreatedAt()
+                post.getCreatedAt(),
+                post.getUpdatedAt()
         );
     }
 }

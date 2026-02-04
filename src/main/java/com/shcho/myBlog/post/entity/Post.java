@@ -27,6 +27,8 @@ public class Post extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String content;
 
+    private boolean isPublic;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "blog_id", nullable = false)
     private Blog blog;
@@ -35,12 +37,13 @@ public class Post extends BaseEntity {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
-    public static Post of(Blog blog, Category category, String title, String content) {
+    public static Post of(Blog blog, Category category, String title, String content, boolean isPublic) {
         return Post.builder()
                 .title(title)
                 .content(content)
                 .blog(blog)
                 .category(category)
+                .isPublic(isPublic)
                 .build();
     }
 }
