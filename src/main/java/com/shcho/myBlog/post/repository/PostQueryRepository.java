@@ -18,6 +18,8 @@ import java.util.Optional;
 import static com.shcho.myBlog.blog.entity.QBlog.blog;
 import static com.shcho.myBlog.category.entity.QCategory.category;
 import static com.shcho.myBlog.post.entity.QPost.post;
+
+import static com.shcho.myBlog.post.repository.predicate.PostPredicates.*;
 import static com.shcho.myBlog.user.entity.QUser.user;
 
 @Repository
@@ -71,7 +73,7 @@ public class PostQueryRepository {
 
         BooleanExpression[] conditions = new BooleanExpression[]{
                 nicknameEq(nickname),
-                post.id.eq(postId),
+                postEqPostId(postId),
                 isPublicOnly()
         };
 
@@ -143,39 +145,6 @@ public class PostQueryRepository {
                 .fetchOne();
 
         return Optional.ofNullable(result);
-    }
-
-    private BooleanExpression nicknameEq(String nickname) {
-        return user.nickname.eq(nickname);
-    }
-
-    private BooleanExpression isPublicOnly() {
-        return post.isPublic.isTrue();
-    }
-
-    private BooleanExpression categoryIdEq(Long categoryId) {
-        return category.id.eq(categoryId);
-    }
-
-    private BooleanExpression categoryBlogEqPostBlog() {
-        return category.blog.eq(post.blog);
-    }
-
-    private BooleanExpression blogEqBlogId(Long blogId) {
-        return post.blog.id.eq(blogId);
-    }
-
-    private BooleanExpression postEqPostId(Long postId) {
-        return post.id.eq(postId);
-    }
-
-    private BooleanExpression keywordInTitleOrContent(String keyword) {
-        return post.title.contains(keyword)
-                .or(post.content.isNotNull().and(post.content.contains(keyword)));
-    }
-
-    private BooleanExpression isPublicEq(Boolean isPublic) {
-        return isPublic == null ? null : post.isPublic.eq(isPublic);
     }
 
     private JPAQuery<PostThumbnailResponseDto> baseThumbnailQuery() {
