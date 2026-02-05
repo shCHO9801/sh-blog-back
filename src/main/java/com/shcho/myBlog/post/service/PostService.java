@@ -59,6 +59,7 @@ public class PostService {
         if(title.isBlank()) {
             throw new CustomException(TITLE_CAN_NOT_BLANK);
         }
+
         String content = requestDto.content();
 
         Post newPost = Post.of(myBlog, category, title, content, requestDto.isPublic());
@@ -70,12 +71,15 @@ public class PostService {
         return postQueryRepository.findPostThumbnailsByNickname(nickname, pageable);
     }
 
-    public Page<PostThumbnailResponseDto> getPostsByUserNicknameAndKeyword(String nickname, String keyword, Pageable pageable) {
+    public Page<PostThumbnailResponseDto> getPostsByUserNicknameAndKeyword(
+            String nickname, String keyword, Pageable pageable
+    ) {
         if(keyword == null || keyword.trim().isBlank()){
             throw new CustomException(INVALID_KEYWORD);
         }
 
-        return postQueryRepository.findPostThumbnailsByNicknameAndKeyword(nickname,keyword.trim(),pageable);
+        return postQueryRepository
+                .findPostThumbnailsByNicknameAndKeyword(nickname,keyword.trim(),pageable);
     }
 
     public Post getPostByNicknameAndPostId(String nickname, Long postId) {
@@ -83,11 +87,15 @@ public class PostService {
                 .orElseThrow(() -> new CustomException(POST_NOT_FOUND));
     }
 
-    public Page<PostThumbnailResponseDto> getPostsByUserNicknameAndCategoryId(String nickname, Long categoryId, Pageable pageable) {
+    public Page<PostThumbnailResponseDto> getPostsByUserNicknameAndCategoryId(
+            String nickname, Long categoryId, Pageable pageable
+    ) {
         return postQueryRepository.findPostThumbnailsByNicknameAndCategoryId(nickname, categoryId, pageable);
     }
 
-    public Page<PostThumbnailResponseDto> getMyAllPosts(Long userId, Boolean publicPost, Pageable pageable) {
+    public Page<PostThumbnailResponseDto> getMyAllPosts(
+            Long userId, Boolean publicPost, Pageable pageable
+    ) {
         Blog myBlog = blogRepository.findBlogByUserIdFetchUser(userId)
                 .orElseThrow(() -> new CustomException(BLOG_NOT_FOUND));
 
