@@ -1,10 +1,7 @@
 package com.shcho.myBlog.post.controller;
 
 import com.shcho.myBlog.common.dto.PagedResponseDto;
-import com.shcho.myBlog.post.dto.CreatePostRequestDto;
-import com.shcho.myBlog.post.dto.CreatePostResponseDto;
-import com.shcho.myBlog.post.dto.PostResponseDto;
-import com.shcho.myBlog.post.dto.PostThumbnailResponseDto;
+import com.shcho.myBlog.post.dto.*;
 import com.shcho.myBlog.post.entity.Post;
 import com.shcho.myBlog.post.service.PostService;
 import com.shcho.myBlog.user.auth.CustomUserDetails;
@@ -15,6 +12,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -91,5 +90,54 @@ public class PostController {
     ) {
         Post post = postService.getMyPostByPostId(userDetails.getUserId(), postId);
         return ResponseEntity.ok(PostResponseDto.from(post));
+    }
+
+    @PatchMapping("/my/posts/{postId}/title")
+    public ResponseEntity<PostResponseDto> updateMyPostTitle(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long postId,
+            @Valid @RequestBody UpdatePostTitleRequestDto requestDto
+    ) {
+        Post post = postService.updateTitle(userDetails.getUserId(), postId, requestDto);
+        return ResponseEntity.ok(PostResponseDto.from(post));
+    }
+
+    @PatchMapping("/my/posts/{postId}/content")
+    public ResponseEntity<PostResponseDto> updateMyPostContent(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long postId,
+            @RequestBody UpdatePostContentRequestDto requestDto
+    ) {
+        Post post = postService.updateContent(userDetails.getUserId(), postId, requestDto);
+        return ResponseEntity.ok(PostResponseDto.from(post));
+    }
+
+    @PatchMapping("/my/posts/{postId}/category")
+    public ResponseEntity<PostResponseDto> updateMyPostCategory(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long postId,
+            @RequestBody UpdatePostCategoryRequestDto requestDto
+    ) {
+        Post post = postService.updateCategory(userDetails.getUserId(), postId, requestDto);
+        return ResponseEntity.ok(PostResponseDto.from(post));
+    }
+
+    @PatchMapping("/my/posts/{postId}/public")
+    public ResponseEntity<PostResponseDto> updateMyPostPublic(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long postId,
+            @Valid @RequestBody UpdatePostPublicRequestDto requestDto
+    ) {
+        Post post = postService.updatePublic(userDetails.getUserId(), postId, requestDto);
+        return ResponseEntity.ok(PostResponseDto.from(post));
+    }
+
+    @DeleteMapping("/my/posts/{postId}")
+    public ResponseEntity<DeletePostResponseDto> deleteMyPost(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long postId
+    ) {
+        Long deletedPostId = postService.deletePost(userDetails.getUserId(), postId);
+        return ResponseEntity.ok(DeletePostResponseDto.from(deletedPostId));
     }
 }

@@ -37,6 +37,25 @@ public class Post extends BaseEntity {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
+    public boolean isPublic() {
+        return this.isPublic;
+    }
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public void setCategory(Category category) {
+        this.category = category;
+    }
+
+    public void setPublic(boolean isPublic) {
+        this.isPublic = isPublic;
+    }
+
     public static Post of(Blog blog, Category category, String title, String content, boolean isPublic) {
         return Post.builder()
                 .title(title)
