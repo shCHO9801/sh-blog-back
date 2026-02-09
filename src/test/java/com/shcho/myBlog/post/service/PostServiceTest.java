@@ -5,8 +5,7 @@ import com.shcho.myBlog.blog.repository.BlogRepository;
 import com.shcho.myBlog.category.entity.Category;
 import com.shcho.myBlog.category.repository.CategoryRepository;
 import com.shcho.myBlog.libs.exception.CustomException;
-import com.shcho.myBlog.post.dto.CreatePostRequestDto;
-import com.shcho.myBlog.post.dto.PostThumbnailResponseDto;
+import com.shcho.myBlog.post.dto.*;
 import com.shcho.myBlog.post.entity.Post;
 import com.shcho.myBlog.post.repository.PostQueryRepository;
 import com.shcho.myBlog.post.repository.PostRepository;
@@ -212,7 +211,7 @@ class PostServiceTest {
                 () -> postService.createMyPost(userId, requestDto));
 
         assertEquals(TITLE_CAN_NOT_BLANK, exception.getErrorCode());
-        verify(blogRepository, never()).save(any());
+        verify(postRepository, never()).save(any());
 
         verify(blogRepository, times(1))
                 .findBlogByUserIdFetchUser(userId);
@@ -472,6 +471,170 @@ class PostServiceTest {
         verify(postQueryRepository, times(1))
                 .getMyPostByBlog(blog.getId(), postId);
     }
+
+    @Test
+    @DisplayName("Title 수정 성공")
+    void updateTitleSuccess() {
+        // given
+        Long userId = 1L;
+        Long postId = 1L;
+
+        User user = User.builder().userId(userId).build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+        Post post = Post.builder().id(postId).title("old title").blog(blog).build();
+
+        UpdatePostTitleRequestDto requestDto = new UpdatePostTitleRequestDto(" new title ");
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(postQueryRepository.getMyPostByBlog(blog.getId(), postId))
+                .thenReturn(Optional.of(post));
+
+        // when
+        Post updatedPost = postService.updateTitle(userId, postId, requestDto);
+
+        // then
+        assertNotNull(updatedPost);
+        assertEquals(postId, updatedPost.getId());
+        assertEquals("new title", updatedPost.getTitle());
+        verify(blogRepository, times(1))
+                .findBlogByUserIdFetchUser(userId);
+        verify(postQueryRepository, times(1))
+                .getMyPostByBlog(blog.getId(), postId);
+    }
+
+    @Test
+    @DisplayName("Content 수정 성공")
+    void updateContentSuccess() {
+        // given
+        Long userId = 1L;
+        Long postId = 1L;
+        User user = User.builder().userId(userId).build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+        Post post = Post.builder().id(postId).title("title").content("oldContent").blog(blog).build();
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(postQueryRepository.getMyPostByBlog(blog.getId(), postId))
+                .thenReturn(Optional.of(post));
+
+        UpdatePostContentRequestDto requestDto = new UpdatePostContentRequestDto("new content");
+
+        // when
+        Post updatePost = postService.updateContent(userId, postId, requestDto);
+
+        // then
+        assertNotNull(updatePost);
+        assertEquals(postId, updatePost.getId());
+        assertEquals(requestDto.content(), updatePost.getContent());
+        verify(blogRepository, times(1))
+                .findBlogByUserIdFetchUser(userId);
+        verify(postQueryRepository, times(1))
+                .getMyPostByBlog(blog.getId(), postId);
+    }
+
+    @Test
+    @DisplayName("Category 수정 성공")
+    void updateCategorySuccess() {
+        // given
+        Long userId = 1L;
+        Long postId = 1L;
+        User user = User.builder().userId(userId).build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+        Category oldCategory = Category.builder().id(1L).build();
+        Post post = Post.builder().id(postId).title("title").content("content").category(oldCategory).blog(blog).build();
+
+        Category newCategory = Category.builder().id(2L).blog(blog).build();
+
+        UpdatePostCategoryRequestDto requestDto = new UpdatePostCategoryRequestDto(2L);
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(postQueryRepository.getMyPostByBlog(blog.getId(), postId))
+                .thenReturn(Optional.of(post));
+        when(categoryRepository.findById(newCategory.getId()))
+                .thenReturn(Optional.of(newCategory));
+        when(categoryRepository.existsByParent_Id(newCategory.getId()))
+                .thenReturn(false);
+
+        // when
+        Post updatedPost = postService.updateCategory(userId, postId, requestDto);
+
+        // then
+        assertNotNull(updatedPost);
+        assertEquals(postId, updatedPost.getId());
+        assertEquals(newCategory.getId(), updatedPost.getCategory().getId());
+
+        verify(blogRepository, times(1))
+                .findBlogByUserIdFetchUser(userId);
+        verify(postQueryRepository, times(1))
+                .getMyPostByBlog(blog.getId(), postId);
+        verify(categoryRepository, times(1))
+                .findById(newCategory.getId());
+        verify(categoryRepository, times(1))
+                .existsByParent_Id(newCategory.getId());
+    }
+
+    @Test
+    @DisplayName("Public 수정 성공")
+    void updatePublicSuccess() {
+        // given
+        Long userId = 1L;
+        Long postId = 1L;
+
+        User user = User.builder().userId(userId).build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+        Post post = Post.builder().id(postId).title("title").isPublic(true).blog(blog).build();
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(postQueryRepository.getMyPostByBlog(blog.getId(), postId))
+                .thenReturn(Optional.of(post));
+
+        UpdatePostPublicRequestDto requestDto = new UpdatePostPublicRequestDto(false);
+
+        // when
+        Post updatedPost = postService.updatePublic(userId, postId, requestDto);
+
+        // then
+        assertNotNull(updatedPost);
+        assertEquals(postId, updatedPost.getId());
+        assertEquals(requestDto.isPublic(), updatedPost.isPublic());
+        verify(blogRepository, times(1))
+                .findBlogByUserIdFetchUser(userId);
+        verify(postQueryRepository, times(1))
+                .getMyPostByBlog(blog.getId(), postId);
+    }
+
+    @Test
+    @DisplayName("게시글 삭제 성공")
+    void deletePostSuccess() {
+        // given
+        Long userId = 1L;
+        Long postId = 1L;
+        User user = User.builder().userId(userId).build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+        Post post = Post.builder().id(1L).blog(blog).build();
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(postQueryRepository.getMyPostByBlog(blog.getId(), postId))
+                .thenReturn(Optional.of(post));
+
+        // when
+        Long deletedPostId = postService.deletePost(userId, postId);
+
+        // then
+        assertNotNull(deletedPostId);
+        assertEquals(postId, deletedPostId);
+        verify(blogRepository, times(1))
+                .findBlogByUserIdFetchUser(userId);
+        verify(postQueryRepository, times(1))
+                .getMyPostByBlog(blog.getId(), postId);
+        verify(postRepository, times(1))
+                .delete(post);
+    }
+
 
     private PostThumbnailResponseDto buildPostThumbnailResponseDto(
             Long id, String title

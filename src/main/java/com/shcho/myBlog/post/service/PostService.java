@@ -9,7 +9,6 @@ import com.shcho.myBlog.post.dto.*;
 import com.shcho.myBlog.post.entity.Post;
 import com.shcho.myBlog.post.repository.PostQueryRepository;
 import com.shcho.myBlog.post.repository.PostRepository;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -51,12 +50,12 @@ public class PostService {
     public Page<PostThumbnailResponseDto> getPostsByUserNicknameAndKeyword(
             String nickname, String keyword, Pageable pageable
     ) {
-        if(keyword == null || keyword.trim().isBlank()){
+        if (keyword == null || keyword.trim().isBlank()) {
             throw new CustomException(INVALID_KEYWORD);
         }
 
         return postQueryRepository
-                .findPostThumbnailsByNicknameAndKeyword(nickname,keyword.trim(),pageable);
+                .findPostThumbnailsByNicknameAndKeyword(nickname, keyword.trim(), pageable);
     }
 
     public Post getPostByNicknameAndPostId(String nickname, Long postId) {
@@ -138,7 +137,7 @@ public class PostService {
     private String validateTitle(String title) {
         title = title.trim();
 
-        if(title.isBlank()) {
+        if (title.isBlank()) {
             throw new CustomException(TITLE_CAN_NOT_BLANK);
         }
 

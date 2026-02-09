@@ -1,7 +1,6 @@
 package com.shcho.myBlog.blog.repository;
 
 import com.shcho.myBlog.blog.entity.Blog;
-import com.shcho.myBlog.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

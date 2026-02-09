@@ -13,8 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-
 @RestController
 @RequestMapping("/api/posts")
 @RequiredArgsConstructor
@@ -53,7 +51,7 @@ public class PostController {
     }
 
     @GetMapping("/public/{nickname}/posts/{postId}")
-    public ResponseEntity<PostResponseDto> getPostByNicknameAndPostId (
+    public ResponseEntity<PostResponseDto> getPostByNicknameAndPostId(
             @PathVariable String nickname,
             @PathVariable Long postId
     ) {
