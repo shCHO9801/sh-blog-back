@@ -26,3 +26,10 @@ logging:
 
 jwt:
   secret: ${JWT_SECRET}
+
+minio:
+  url: ${MINIO_URL}
+  access-key: ${MINIO_ACCESS_KEY}
+  secret-key: ${MINIO_SECRET_KEY}
+  bucket: shblog
+  base-url: https://minio.shhome.synology.me
