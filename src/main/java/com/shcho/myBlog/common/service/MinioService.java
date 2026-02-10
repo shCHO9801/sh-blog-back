@@ -2,8 +2,6 @@ package com.shcho.myBlog.common.service;
 
 import com.shcho.myBlog.common.entity.UploadType;
 import com.shcho.myBlog.libs.exception.CustomException;
-import io.minio.BucketExistsArgs;
-import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import lombok.RequiredArgsConstructor;
