@@ -14,6 +14,9 @@ public enum ErrorCode {
     POST_CAN_NOT_USE_NON_LEAF_CATEGORY(400, "POST_001", "게시글은 리프 카테고리가 아니면 사용할 수 없습니다."),
     INVALID_KEYWORD(400, "POST_003", "검색 키워드는 공백일 수 없습니다."),
     TITLE_CAN_NOT_BLANK(400, "POST_004", "게시글 제목은 공백일 수 없습니다."),
+    FILE_EMPTY(400, "FILE_001", "파일이 비어있습니다."),
+    FILE_TOO_LARGE(400, "FILE_002", "파일 용량이 제한을 초과했습니다."),
+    INVALID_FILE_EXTENSION(400, "FILE_003", "허용되지 않은 파일 확장자입니다."),
 
     /* 401 UNAUTHORIZED */
     INVALID_USERNAME_OR_PASSWORD(401, "AUTH_001", "아이디 또는 비밀번호가 올바르지 않습니다."),
@@ -38,7 +41,8 @@ public enum ErrorCode {
 
     /* 500 INTERNAL_SERVER_ERROR */
     INTERNAL_SERVER_ERROR(500, "COMMON_500", "서버 오류가 발생했습니다."),
-    JWT_KEY_ERROR(500, "AUTH_500", "JWT 키가 유효하지 않습니다.");
+    JWT_KEY_ERROR(500, "AUTH_500", "JWT 키가 유효하지 않습니다."),
+    FILE_UPLOAD_FAILED(500, "FILE_004", "파일 업로드에 실패 했습니다.");
 
     private final Integer httpStatus;
     private final String code;
