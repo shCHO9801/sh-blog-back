@@ -30,6 +30,9 @@ class MinioServiceTest {
     @Mock
     private MinioClient minioClient;
 
+    @Mock
+    private UploadFileService uploadFileService;
+
     @InjectMocks
     private MinioService minioService;
 
@@ -115,6 +118,10 @@ class MinioServiceTest {
 
         when(minioClient.putObject(any(PutObjectArgs.class)))
                 .thenReturn(mock(ObjectWriteResponse.class));
+        when(uploadFileService.saveTemp(eq(1L), eq(IMAGE), anyString(), anyString()))
+                .thenReturn(123L);
+        when(uploadFileService.appendFid(anyString(), eq(123L)))
+                .thenReturn("https://minio.shhome.synology.me/shblog/users/1/images/x.jpg?fid=123");
 
         // when
         String url = minioService.upload(1L, file, IMAGE);
@@ -122,7 +129,8 @@ class MinioServiceTest {
         // then
         assertNotNull(url);
         assertTrue(url.startsWith("https://minio.shhome.synology.me/shblog/users/1/images/"));
-        assertTrue(url.endsWith(".jpg"));
+        assertTrue(url.contains(".jpg"));
+        assertTrue(url.contains("?fid="));
 
         ArgumentCaptor<PutObjectArgs> captor = ArgumentCaptor.forClass(PutObjectArgs.class);
         verify(minioClient, times(1)).putObject(captor.capture());
@@ -131,5 +139,10 @@ class MinioServiceTest {
         assertEquals("shblog", args.bucket());
         assertNotNull(args.object());
         assertTrue(args.object().contains("users/1/images/"));
+
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(uploadFileService).appendFid(urlCaptor.capture(), eq(123L));
+        assertTrue(urlCaptor.getValue().startsWith("https://minio.shhome.synology.me/shblog/users/1/images/"));
+
     }
 }
