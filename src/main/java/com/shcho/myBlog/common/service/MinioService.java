@@ -4,6 +4,7 @@ import com.shcho.myBlog.common.entity.UploadType;
 import com.shcho.myBlog.libs.exception.CustomException;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
+import io.minio.RemoveObjectArgs;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,6 +28,7 @@ import static com.shcho.myBlog.libs.exception.ErrorCode.*;
 public class MinioService {
 
     private final MinioClient minioClient;
+    private final UploadFileService uploadFileService;
 
     @Value("${minio.bucket}")
     private String bucket;
@@ -62,11 +64,27 @@ public class MinioService {
                             .build()
             );
 
-            return buildFileUrl(objectName);
+            String url = buildFileUrl(objectName);
+            Long fid = uploadFileService.saveTemp(userId, type, objectName, url);
+            return uploadFileService.appendFid(url, fid);
         } catch (Exception e) {
             log.error("MinIO 업로드 실패. userId = {}, type = {}, objectName = {}, reason = {}",
                     userId, type, objectName, e.getMessage(), e);
             throw new CustomException(FILE_UPLOAD_FAILED);
+        }
+    }
+
+    public void deleteObject(String objectName) {
+        try {
+            minioClient.removeObject(
+                    RemoveObjectArgs.builder()
+                            .bucket(bucket)
+                            .object(objectName)
+                            .build()
+            );
+        } catch (Exception e) {
+            log.error("MinIO 삭제 실패. objectName = {}, reason = {}", objectName, e.getMessage(), e);
+            throw new CustomException(FILE_DELETE_FAILED);
         }
     }
 
