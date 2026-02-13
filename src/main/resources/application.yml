@@ -19,6 +19,12 @@ spring:
         format_sql: true
         show_sql: true
 
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: always
+
 logging:
   level:
     org.hibernate.SQL: debug
@@ -33,3 +39,9 @@ minio:
   secret-key: ${MINIO_SECRET_KEY}
   bucket: shblog
   base-url: https://minio.shhome.synology.me
+
+cleanup:
+  temp-ttl-hours: 24
+  deleted-retention-days: 7
+  schedule-cron: "0 0 3 * * *"
+
