@@ -4,6 +4,9 @@ import com.shcho.myBlog.blog.entity.Blog;
 import com.shcho.myBlog.blog.repository.BlogRepository;
 import com.shcho.myBlog.category.entity.Category;
 import com.shcho.myBlog.category.repository.CategoryRepository;
+import com.shcho.myBlog.common.entity.UploadFile;
+import com.shcho.myBlog.common.service.MinioService;
+import com.shcho.myBlog.common.service.UploadFileService;
 import com.shcho.myBlog.libs.exception.CustomException;
 import com.shcho.myBlog.post.dto.*;
 import com.shcho.myBlog.post.entity.Post;
@@ -21,9 +24,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.shcho.myBlog.libs.exception.ErrorCode.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,6 +49,10 @@ class PostServiceTest {
     private CategoryRepository categoryRepository;
     @Mock
     private PostQueryRepository postQueryRepository;
+    @Mock
+    private UploadFileService uploadFileService;
+    @Mock
+    private MinioService minioService;
     @InjectMocks
     private PostService postService;
 
@@ -69,7 +78,11 @@ class PostServiceTest {
         when(categoryRepository.existsByParent_Id(category.getId()))
                 .thenReturn(false);
         when(postRepository.save(any(Post.class)))
-                .thenAnswer(inv -> inv.getArgument(0));
+                .thenAnswer(inv -> {
+                    Post p = inv.getArgument(0);
+                    ReflectionTestUtils.setField(p, "id", 99L);
+                    return p;
+                });
 
         // when
         Post newPost = postService.createMyPost(userId, requestDto);
@@ -88,6 +101,9 @@ class PostServiceTest {
         assertEquals("new Post Content", saved.getContent());
         assertEquals(category.getId(), saved.getCategory().getId());
         assertEquals(blog.getId(), saved.getBlog().getId());
+
+        verify(uploadFileService, times(1))
+                .attachFilesToPost(eq(userId), eq(99L), eq("new Post Content"));
     }
 
     @Test
@@ -517,6 +533,11 @@ class PostServiceTest {
                 .thenReturn(Optional.of(blog));
         when(postQueryRepository.getMyPostByBlog(blog.getId(), postId))
                 .thenReturn(Optional.of(post));
+        when(uploadFileService.extractFids("new content"))
+                .thenReturn(java.util.Collections.emptySet());
+        when(uploadFileService.getAttachedFilesByPostId(postId))
+                .thenReturn(java.util.Collections.emptyList());
+
 
         UpdatePostContentRequestDto requestDto = new UpdatePostContentRequestDto("new content");
 
@@ -620,6 +641,10 @@ class PostServiceTest {
                 .thenReturn(Optional.of(blog));
         when(postQueryRepository.getMyPostByBlog(blog.getId(), postId))
                 .thenReturn(Optional.of(post));
+        when(uploadFileService.getAttachedFilesByPostId(postId))
+                .thenReturn(java.util.Collections.emptyList());
+        doNothing().when(uploadFileService)
+                .markDeletedAndSaveAll(anyList());
 
         // when
         Long deletedPostId = postService.deletePost(userId, postId);
@@ -633,6 +658,96 @@ class PostServiceTest {
                 .getMyPostByBlog(blog.getId(), postId);
         verify(postRepository, times(1))
                 .delete(post);
+    }
+
+    @Test
+    @DisplayName("Content 수정 시 : 기존 첨부되어있던 파일중 본문에서 제거된 파일은 MinIO 삭제 + DELETED 처리")
+    void updateContentDeletesRemovedFiles() {
+        // given
+        Long userId = 1L;
+        Long postId = 1L;
+
+        User user = User.builder().userId(userId).build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+        Post post = Post.builder().id(1L).content("old content").blog(blog).build();
+
+        String newContent = "new content?fid=2";
+
+        UploadFile file1 = UploadFile.builder().id(1L).userId(userId).postId(postId)
+                .objectName("users/1/images/2026/02/a.jpg").build();
+        UploadFile file2 = UploadFile.builder().id(2L).userId(userId).postId(postId)
+                .objectName("users/1/images/2026/02/b.jpg").build();
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(postQueryRepository.getMyPostByBlog(blog.getId(), postId))
+                .thenReturn(Optional.of(post));
+        when(uploadFileService.extractFids(newContent))
+                .thenReturn(Set.of(2L));
+        when(uploadFileService.getAttachedFilesByPostId(postId))
+                .thenReturn(List.of(file1, file2));
+
+        UpdatePostContentRequestDto requestDto = new UpdatePostContentRequestDto(newContent);
+
+        // when
+        Post updatedPost = postService.updateContent(userId, postId, requestDto);
+
+        // then
+        assertEquals(newContent, updatedPost.getContent());
+
+        verify(minioService, times(1))
+                .deleteObject(file1.getObjectName());
+        verify(minioService, never())
+                .deleteObject(file2.getObjectName());
+
+        ArgumentCaptor<List<UploadFile>> captor = ArgumentCaptor.forClass(List.class);
+        verify(uploadFileService, times(1))
+                .markDeletedAndSaveAll(captor.capture());
+        List<UploadFile> deletedList = captor.getValue();
+        assertEquals(1, deletedList.size());
+        assertEquals(file1.getId(), deletedList.get(0).getId());
+
+        verify(uploadFileService, times(1))
+                .attachFilesToPost(userId, postId, newContent);
+    }
+
+    @Test
+    @DisplayName("게시글 삭제 시 - ATTACHED 파일 전부 MinIO 삭제 + DELETED 처리")
+    void deletePostDeletesAllAttachedFiles() {
+        // given
+        Long userId = 1L;
+        Long postId = 1L;
+
+        User user = User.builder().userId(userId).build();
+        Blog blog = Blog.builder().id(1L).user(user).build();
+        Post post = Post.builder().id(1L).content("old content").blog(blog).build();
+
+        UploadFile file1 = UploadFile.builder().id(1L).userId(userId).postId(postId)
+                .objectName("users/1/images/2026/02/a.jpg").build();
+        UploadFile file2 = UploadFile.builder().id(2L).userId(userId).postId(postId)
+                .objectName("users/1/images/2026/02/b.jpg").build();
+
+        when(blogRepository.findBlogByUserIdFetchUser(userId))
+                .thenReturn(Optional.of(blog));
+        when(postQueryRepository.getMyPostByBlog(blog.getId(), postId))
+                .thenReturn(Optional.of(post));
+        when(uploadFileService.getAttachedFilesByPostId(postId))
+                .thenReturn(List.of(file1, file2));
+
+        // when
+        Long deletedPostId = postService.deletePost(userId, postId);
+
+        // then
+        assertEquals(postId, deletedPostId);
+
+        verify(minioService, times(1)).deleteObject("users/1/images/2026/02/a.jpg");
+        verify(minioService, times(1)).deleteObject("users/1/images/2026/02/b.jpg");
+
+        ArgumentCaptor<List<UploadFile>> captor = ArgumentCaptor.forClass(List.class);
+        verify(uploadFileService, times(1)).markDeletedAndSaveAll(captor.capture());
+        assertEquals(2, captor.getValue().size());
+
+        verify(postRepository, times(1)).delete(post);
     }
 
 

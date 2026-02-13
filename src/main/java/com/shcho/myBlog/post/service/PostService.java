@@ -4,6 +4,9 @@ import com.shcho.myBlog.blog.entity.Blog;
 import com.shcho.myBlog.blog.repository.BlogRepository;
 import com.shcho.myBlog.category.entity.Category;
 import com.shcho.myBlog.category.repository.CategoryRepository;
+import com.shcho.myBlog.common.entity.UploadFile;
+import com.shcho.myBlog.common.service.MinioService;
+import com.shcho.myBlog.common.service.UploadFileService;
 import com.shcho.myBlog.libs.exception.CustomException;
 import com.shcho.myBlog.post.dto.*;
 import com.shcho.myBlog.post.entity.Post;
@@ -26,6 +29,8 @@ public class PostService {
     private final BlogRepository blogRepository;
     private final CategoryRepository categoryRepository;
     private final PostQueryRepository postQueryRepository;
+    private final UploadFileService uploadFileService;
+    private final MinioService minioService;
 
 
     @Transactional
@@ -40,7 +45,11 @@ public class PostService {
 
         Post newPost = Post.of(myBlog, category, title, content, requestDto.isPublic());
 
-        return postRepository.save(newPost);
+        Post saved = postRepository.save(newPost);
+
+        uploadFileService.attachFilesToPost(userId, saved.getId(), saved.getContent());
+
+        return saved;
     }
 
     public Page<PostThumbnailResponseDto> getPostsByUserNickname(String nickname, Pageable pageable) {
@@ -99,10 +108,22 @@ public class PostService {
     @Transactional
     public Post updateContent(Long userId, Long postId, UpdatePostContentRequestDto requestDto) {
         Post post = getMyPostByPostId(userId, postId);
-
         String content = requestDto.content();
 
+        var newFids = uploadFileService.extractFids(content);
+        var attachedFiles = uploadFileService.getAttachedFilesByPostId(post.getId());
+        var toDelete = attachedFiles.stream()
+                        .filter(f -> !newFids.contains(f.getId()))
+                                .toList();
+
+        for(UploadFile file : toDelete) {
+            minioService.deleteObject(file.getObjectName());
+        }
+        uploadFileService.markDeletedAndSaveAll(toDelete);
+
         post.setContent(content);
+
+        uploadFileService.attachFilesToPost(userId, post.getId(), content);
 
         return post;
     }
@@ -129,8 +150,14 @@ public class PostService {
         Post post = getMyPostByPostId(userId, postId);
         Long id = post.getId();
 
-        postRepository.delete(post);
+        var attachedFiles = uploadFileService.getAttachedFilesByPostId(id);
 
+        for(UploadFile attachedFile : attachedFiles) {
+            minioService.deleteObject(attachedFile.getObjectName());
+        }
+        uploadFileService.markDeletedAndSaveAll(attachedFiles);
+
+        postRepository.delete(post);
         return id;
     }
 
