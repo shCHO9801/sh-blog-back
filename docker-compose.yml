@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   shblog:
@@ -13,3 +13,14 @@ services:
       - .env
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+
+  frontend:
+    container_name: shblog-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3050:3000"
+    restart: always
+    environment:
+      - NODE_ENV=production
