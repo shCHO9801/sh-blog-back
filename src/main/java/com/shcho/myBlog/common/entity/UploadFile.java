@@ -6,12 +6,14 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class UploadFile {
+public class UploadFile extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,6 +38,8 @@ public class UploadFile {
     @Column(nullable = false)
     private UploadStatus status;
 
+    private LocalDateTime deletedAt;
+
     public void attachToPost(Long postId) {
         this.postId = postId;
         this.status = UploadStatus.ATTACHED;
@@ -43,5 +47,6 @@ public class UploadFile {
 
     public void markDeleted() {
         this.status = UploadStatus.DELETED;
+        this.deletedAt = LocalDateTime.now();
     }
 }
