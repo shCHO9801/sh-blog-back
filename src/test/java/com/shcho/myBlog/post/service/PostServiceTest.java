@@ -759,6 +759,8 @@ class PostServiceTest {
 
         String rawContent = """
             <p>  안녕   </p>
+            ![img1](https://example.com/a.png)
+            [link](https://example.com)
             # 제목
             ```java
             System.out.println("hi");
@@ -796,6 +798,9 @@ class PostServiceTest {
         assertFalse(r1.summary().contains("\n"));
         assertFalse(r1.summary().contains("  "));
         assertEquals("짧은 내용", result.get(1).summary());
+
+        assertFalse(r1.summary().contains("!["));
+        assertFalse(r1.summary().contains("[link]("));
 
         verify(postQueryRepository, times(1))
                 .findRecentPostsByNickname(nickname, 6);

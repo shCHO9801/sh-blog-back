@@ -218,12 +218,14 @@ public class PostService {
             return "";
         }
 
-        String noHtml = content.replaceAll("<[^>]*>", " ");
+        String noHtml = content.replaceAll("<[^>]*>", " "); // HTML
 
         String noMarkdown = noHtml
                 .replaceAll("(?s)```.*?```", " ") // code block
                 .replaceAll("`[^`]*`", " ")       // inline code
-                .replaceAll("[#>*_\\-]", " ");    // tokens
+                .replaceAll("[#>*_\\-]", " ")    // tokens
+                .replaceAll("!\\[[^\\]]*\\]\\([^\\)]*\\)", " ") // image
+                .replaceAll("\\[[^\\]]*\\]\\([^\\)]*\\)", " "); // link
 
         String normalized = noMarkdown
                 .replaceAll("\\s+", " ")
