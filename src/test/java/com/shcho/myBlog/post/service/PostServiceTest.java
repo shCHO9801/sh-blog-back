@@ -750,6 +750,120 @@ class PostServiceTest {
         verify(postRepository, times(1)).delete(post);
     }
 
+    @Test
+    @DisplayName("닉네임 기준 최근 게시글 요약 조회 성공")
+    void getRecentPostThumbnailsByNicknameSuccess() {
+        // given
+        String nickname = "user1";
+        int limit = 6;
+
+        String rawContent = """
+            <p>  안녕   </p>
+            # 제목
+            ```java
+            System.out.println("hi");
+            ```
+            본문   내용   입니다.   `inlineCode`
+            """;
+
+        PostRecentThumbnailQueryDto q1 = new PostRecentThumbnailQueryDto(
+                1L, "t1", rawContent, "cat1", null
+        );
+        PostRecentThumbnailQueryDto q2 = new PostRecentThumbnailQueryDto(
+                2L, "t2", "짧은 내용", "cat2", null
+        );
+
+        when(postQueryRepository.findRecentPostsByNickname(nickname, limit))
+                .thenReturn(List.of(q1, q2));
+
+        // when
+        List<PostRecentThumbnailResponseDto> result =
+                postService.getRecentPostThumbnailsByNickname(nickname, limit);
+
+        // then
+        assertNotNull(result);
+        assertEquals(2, result.size());
+
+        PostRecentThumbnailResponseDto r1 = result.get(0);
+        assertEquals(1L, r1.postId());
+        assertEquals("t1", r1.title());
+        assertEquals("cat1", r1.categoryName());
+
+        assertFalse(r1.summary().contains("<p>"));
+        assertFalse(r1.summary().contains("#"));
+        assertFalse(r1.summary().contains("```"));
+        assertFalse(r1.summary().contains("inlineCode"));
+        assertFalse(r1.summary().contains("\n"));
+        assertFalse(r1.summary().contains("  "));
+        assertEquals("짧은 내용", result.get(1).summary());
+
+        verify(postQueryRepository, times(1))
+                .findRecentPostsByNickname(nickname, 6);
+        verifyNoMoreInteractions(postQueryRepository);
+    }
+
+    @Test
+    @DisplayName("닉네임 기준 최근 게시글 썸네일 조회 - content가 null/blank면 summary는 빈 문자열")
+    void getRecentPostThumbnailsByNicknameSummaryBlankWhenContentNullOrBlank() {
+        // given
+        String nickname = "user1";
+
+        PostRecentThumbnailQueryDto q1 =
+                new PostRecentThumbnailQueryDto(1L, "t1", null, "cat1", null);
+        PostRecentThumbnailQueryDto q2 =
+                new PostRecentThumbnailQueryDto(2L, "t2", "   ", "cat2", null);
+
+        when(postQueryRepository.findRecentPostsByNickname(nickname, 6))
+                .thenReturn(List.of(q1, q2));
+
+        // when
+        List<PostRecentThumbnailResponseDto> result =
+                postService.getRecentPostThumbnailsByNickname(nickname, 1);
+
+        // then
+        assertEquals(2, result.size());
+        assertEquals("", result.get(0).summary());
+        assertEquals("", result.get(1).summary());
+
+        verify(postQueryRepository, times(1))
+                .findRecentPostsByNickname(nickname, 6);
+    }
+
+    @Test
+    @DisplayName("닉네임 기준 최근 게시글 요약 조회 - 140자 초과 시 140자로 자르고 ... 붙인다")
+    void getRecentPostThumbnailsByNicknameSummaryTruncateWhenOver140() {
+        // given
+        String nickname = "user1";
+
+        // 공백/마크다운/HTML 영향 없이, 순수 텍스트로 200자 만들기
+        String longContent = "a".repeat(200);
+
+        PostRecentThumbnailQueryDto q1 =
+                new PostRecentThumbnailQueryDto(1L, "t1", longContent, "cat1", null);
+
+        when(postQueryRepository.findRecentPostsByNickname(nickname, 6))
+                .thenReturn(List.of(q1));
+
+        // when
+        List<PostRecentThumbnailResponseDto> result =
+                postService.getRecentPostThumbnailsByNickname(nickname, 6);
+
+        // then
+        assertEquals(1, result.size());
+
+        String summary = result.get(0).summary();
+        assertNotNull(summary);
+
+        // 140자 + "..." = 143자
+        assertEquals(143, summary.length());
+        assertTrue(summary.endsWith("..."));
+
+        // 앞부분이 140자 잘린건지(모두 'a'인지)까지 확인
+        assertEquals("a".repeat(140) + "...", summary);
+
+        verify(postQueryRepository, times(1))
+                .findRecentPostsByNickname(nickname, 6);
+    }
 
     private PostThumbnailResponseDto buildPostThumbnailResponseDto(
             Long id, String title
