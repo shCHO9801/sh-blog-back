@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/posts")
 @RequiredArgsConstructor
@@ -68,6 +70,17 @@ public class PostController {
         Page<PostThumbnailResponseDto> getAllPostsByCategoryId =
                 postService.getPostsByUserNicknameAndCategoryId(nickname, categoryId, pageable);
         return ResponseEntity.ok(PagedResponseDto.from(getAllPostsByCategoryId));
+    }
+
+    @GetMapping("/public/{nickname}/thumbnails")
+    public ResponseEntity<List<PostRecentThumbnailResponseDto>> getRecentPostThumbnailsByNickname(
+            @PathVariable String nickname,
+            @RequestParam(defaultValue = "6") int limit
+    ) {
+        List<PostRecentThumbnailResponseDto> getRecentPostThumbnailsByNickname =
+                postService.getRecentPostThumbnailsByNickname(nickname, limit);
+
+        return ResponseEntity.ok(getRecentPostThumbnailsByNickname);
     }
 
     @GetMapping("/my")

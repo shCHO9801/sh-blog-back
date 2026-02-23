@@ -4,6 +4,7 @@ import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.shcho.myBlog.post.dto.PostRecentThumbnailQueryDto;
 import com.shcho.myBlog.post.dto.PostThumbnailResponseDto;
 import com.shcho.myBlog.post.entity.Post;
 import lombok.RequiredArgsConstructor;
@@ -147,6 +148,20 @@ public class PostQueryRepository {
         return Optional.ofNullable(result);
     }
 
+    public List<PostRecentThumbnailQueryDto> findRecentPostsByNickname(String nickname, int limit) {
+
+        BooleanExpression[] conditions = new BooleanExpression[]{
+                nicknameEq(nickname),
+                isPublicOnly()
+        };
+
+        return recentThumbnailQuery()
+                .where(conditions)
+                .orderBy(post.createdAt.desc())
+                .limit(limit)
+                .fetch();
+    }
+
     private JPAQuery<PostThumbnailResponseDto> baseThumbnailQuery() {
         return queryFactory
                 .select(Projections.constructor(
@@ -196,6 +211,22 @@ public class PostQueryRepository {
 
     private JPAQuery<Long> baseCountQueryWithCategoryJoin() {
         return baseCountQuery()
+                .join(post.category, category);
+    }
+
+    private JPAQuery<PostRecentThumbnailQueryDto> recentThumbnailQuery() {
+        return queryFactory
+                .select(Projections.constructor(
+                        PostRecentThumbnailQueryDto.class,
+                        post.id,
+                        post.title,
+                        post.content,
+                        category.name,
+                        post.createdAt
+                ))
+                .from(post)
+                .join(post.blog, blog)
+                .join(blog.user, user)
                 .join(post.category, category);
     }
 }
