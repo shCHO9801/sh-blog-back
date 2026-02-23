@@ -18,6 +18,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 import static com.shcho.myBlog.libs.exception.ErrorCode.*;
 
 @Service
@@ -191,5 +193,46 @@ public class PostService {
         }
 
         return category;
+    }
+
+    public List<PostRecentThumbnailResponseDto> getRecentPostThumbnailsByNickname(String nickname, int limit) {
+        // limit은 6으로 고정, 추후 limit 수 직접 받는 확장 경우의 수를 대비해서 파라미터로 받음
+        limit = 6;
+
+        List<PostRecentThumbnailQueryDto> posts =
+                postQueryRepository.findRecentPostsByNickname(nickname, limit);
+
+        return posts.stream()
+                .map(p -> new PostRecentThumbnailResponseDto(
+                        p.postId(),
+                        p.title(),
+                        toSummary(p.content(), 140),
+                        p.categoryName(),
+                        p.createdAt()
+                ))
+                .toList();
+    }
+
+    private String toSummary(String content, int length) {
+        if(content == null || content.isBlank()) {
+            return "";
+        }
+
+        String noHtml = content.replaceAll("<[^>]*>", " ");
+
+        String noMarkdown = noHtml
+                .replaceAll("(?s)```.*?```", " ") // code block
+                .replaceAll("`[^`]*`", " ")       // inline code
+                .replaceAll("[#>*_\\-]", " ");    // tokens
+
+        String normalized = noMarkdown
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        if (normalized.length() <= length) {
+            return normalized;
+        }
+
+        return normalized.substring(0, length) + "...";
     }
 }
