@@ -19,7 +19,6 @@ import java.util.Optional;
 import static com.shcho.myBlog.blog.entity.QBlog.blog;
 import static com.shcho.myBlog.category.entity.QCategory.category;
 import static com.shcho.myBlog.post.entity.QPost.post;
-
 import static com.shcho.myBlog.post.repository.predicate.PostPredicates.*;
 import static com.shcho.myBlog.user.entity.QUser.user;
 
@@ -100,14 +99,14 @@ public class PostQueryRepository {
                 isPublicOnly()
         };
 
-        List<PostThumbnailResponseDto> content = baseThumbnailQueryWithCategoryJoin()
+        List<PostThumbnailResponseDto> content = baseThumbnailQuery()
                 .where(conditions)
                 .orderBy(post.createdAt.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
 
-        JPAQuery<Long> countQuery = baseCountQueryWithCategoryJoin()
+        JPAQuery<Long> countQuery = baseCountQuery()
                 .where(conditions);
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
@@ -155,7 +154,19 @@ public class PostQueryRepository {
                 isPublicOnly()
         };
 
-        return recentThumbnailQuery()
+        return queryFactory
+                .select(Projections.constructor(
+                        PostRecentThumbnailQueryDto.class,
+                        post.id,
+                        post.title,
+                        post.content,
+                        category.name,
+                        post.createdAt
+                ))
+                .from(post)
+                .join(post.blog, blog)
+                .join(blog.user, user)
+                .join(post.category, category)
                 .where(conditions)
                 .orderBy(post.createdAt.desc())
                 .limit(limit)
@@ -166,14 +177,16 @@ public class PostQueryRepository {
         return queryFactory
                 .select(Projections.constructor(
                         PostThumbnailResponseDto.class,
-                        post.id,
+                        post.id,            // postId
+                        category.name,      // categoryName
                         post.title,
                         post.isPublic,
                         post.createdAt
                 ))
                 .from(post)
                 .join(post.blog, blog)
-                .join(blog.user, user);
+                .join(blog.user, user)
+                .join(post.category, category);
     }
 
     private JPAQuery<PostThumbnailResponseDto> baseThumbnailQueryWithoutUserJoin() {
@@ -181,12 +194,14 @@ public class PostQueryRepository {
                 .select(Projections.constructor(
                         PostThumbnailResponseDto.class,
                         post.id,
+                        category.name,
                         post.title,
                         post.isPublic,
                         post.createdAt
                 ))
                 .from(post)
-                .join(post.blog, blog);
+                .join(post.blog, blog)
+                .join(post.category, category);
     }
 
     private JPAQuery<Long> baseCountQuery() {
@@ -202,31 +217,5 @@ public class PostQueryRepository {
                 .select(post.count())
                 .from(post)
                 .join(post.blog, blog);
-    }
-
-    private JPAQuery<PostThumbnailResponseDto> baseThumbnailQueryWithCategoryJoin() {
-        return baseThumbnailQuery()
-                .join(post.category, category);
-    }
-
-    private JPAQuery<Long> baseCountQueryWithCategoryJoin() {
-        return baseCountQuery()
-                .join(post.category, category);
-    }
-
-    private JPAQuery<PostRecentThumbnailQueryDto> recentThumbnailQuery() {
-        return queryFactory
-                .select(Projections.constructor(
-                        PostRecentThumbnailQueryDto.class,
-                        post.id,
-                        post.title,
-                        post.content,
-                        category.name,
-                        post.createdAt
-                ))
-                .from(post)
-                .join(post.blog, blog)
-                .join(blog.user, user)
-                .join(post.category, category);
     }
 }
