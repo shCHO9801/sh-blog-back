@@ -873,6 +873,6 @@ class PostServiceTest {
     private PostThumbnailResponseDto buildPostThumbnailResponseDto(
             Long id, String title
     ) {
-        return new PostThumbnailResponseDto(id, title, true, null);
+        return new PostThumbnailResponseDto(id, "categoryName", title, true, null);
     }
 }
