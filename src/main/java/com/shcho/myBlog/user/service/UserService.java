@@ -151,6 +151,10 @@ public class UserService {
 
         String newEmail = requestDto.email().trim();
 
+        if(newEmail.equals(user.getEmail())) {
+            throw new CustomException(SAME_EMAIL);
+        }
+
         if (!newEmail.equals(user.getEmail()) && userRepository.existsByEmail(newEmail)) {
             throw new CustomException(DUPLICATED_EMAIL);
         }
