@@ -17,7 +17,7 @@ public class UploadFileCleanupJobScheduler {
     private final JobLauncher jobLauncher;
     private final Job uploadFileCleanupJob;
 
-    @Scheduled(cron = "${cleanup.schedule-cron:0 0 30 * * *}")
+    @Scheduled(cron = "${cleanup.schedule-cron:0 0 3 * * *}")
     public void runUploadFileCleanupJob() {
         Long runAt = System.currentTimeMillis();
         try {

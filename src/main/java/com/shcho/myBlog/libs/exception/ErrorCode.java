@@ -20,7 +20,8 @@ public enum ErrorCode {
 
     /* 401 UNAUTHORIZED */
     INVALID_USERNAME_OR_PASSWORD(401, "AUTH_001", "아이디 또는 비밀번호가 올바르지 않습니다."),
-    AUTH_REQUIRED(401, "AUTH_002", "인증이 필요합니다."),
+    AUTH_REQUIRED(401, "USER_002", "인증이 필요합니다."),
+    INVALID_OLD_PASSWORD(401, "USER_006", "이전 비밀번호가 일치하지 않습니다."),
 
     /* 403 FORBIDDEN */
     CATEGORY_FORBIDDEN(403, "CATEGORY_003", "해당 카테고리에 대한 권한이 없습니다."),
