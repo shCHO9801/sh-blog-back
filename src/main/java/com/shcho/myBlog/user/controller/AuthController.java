@@ -35,7 +35,8 @@ public class AuthController {
     ) {
         User user = userService.signIn(requestDto);
         String token = userService.getUserToken(user);
+        long expiresIn = userService.getExpiresInSeconds(token);
 
-        return ResponseEntity.ok(UserSignInResponseDto.of(user, token));
+        return ResponseEntity.ok(UserSignInResponseDto.of(user, token, expiresIn));
     }
 }

@@ -84,4 +84,8 @@ public class UserService {
     public String getUserToken(User user) {
         return jwtProvider.createToken(user.getUsername(), user.getRole());
     }
+
+    public long getExpiresInSeconds(String token) {
+        return jwtProvider.getExpirationInSeconds(token);
+    }
 }
