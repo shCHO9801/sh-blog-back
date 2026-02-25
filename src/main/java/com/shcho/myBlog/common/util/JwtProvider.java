@@ -2,6 +2,7 @@ package com.shcho.myBlog.common.util;
 
 import com.shcho.myBlog.libs.exception.CustomException;
 import com.shcho.myBlog.user.entity.Role;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -18,6 +19,8 @@ import static com.shcho.myBlog.libs.exception.ErrorCode.JWT_KEY_ERROR;
 @RequiredArgsConstructor
 public class JwtProvider {
 
+    private static final long EXPIRATION_TIME = 1000L * 60L * 60L * 24L;
+
     @Value("${jwt.secret}")
     private String secretKey;
 
@@ -32,7 +35,6 @@ public class JwtProvider {
     }
 
     public String createToken(String username, Role role) {
-        long EXPIRATION_TIME = 1000L * 60L * 60L * 24L;
 
         return Jwts.builder()
                 .subject(username)
@@ -62,5 +64,19 @@ public class JwtProvider {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public long getExpirationInSeconds(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        Date expiration = claims.getExpiration();
+
+        long diffMillis = expiration.getTime() - System.currentTimeMillis();
+
+        return Math.max(0, diffMillis / 1000);
     }
 }
