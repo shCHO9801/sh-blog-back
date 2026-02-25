@@ -3,6 +3,8 @@ package com.shcho.myBlog.user.service;
 import com.shcho.myBlog.category.repository.CategoryRepository;
 import com.shcho.myBlog.common.util.JwtProvider;
 import com.shcho.myBlog.libs.exception.CustomException;
+import com.shcho.myBlog.user.dto.UpdateUserPasswordRequestDto;
+import com.shcho.myBlog.user.dto.UpdateUsernameRequestDto;
 import com.shcho.myBlog.user.dto.UserSignInRequestDto;
 import com.shcho.myBlog.user.dto.UserSignUpRequestDto;
 import com.shcho.myBlog.user.entity.User;
@@ -241,6 +243,101 @@ class UserServiceTest {
         assertEquals("", savedUser.getBlog().getIntro());
         assertEquals(savedUser.getNickname() + "의 블로그", savedUser.getBlog().getTitle());
     }
+
+    @Test
+    @DisplayName("username 수정 성공")
+    void updateUsernameSuccess() {
+        // given
+        User user = User.builder().userId(1L).username("oldUsername").build();
+
+        UpdateUsernameRequestDto requestDto = new UpdateUsernameRequestDto("newUsername");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.existsByUsername(requestDto.username())).thenReturn(false);
+
+        // when
+        User updatedUser = userService.updateUsername(user.getUserId(), requestDto);
+
+        // then
+        assertNotNull(updatedUser);
+        assertEquals(updatedUser.getUsername(), user.getUsername());
+    }
+
+    @Test
+    @DisplayName("username 수정 실패 - 이미 존재하는 username")
+    void updateUsernameFailedExistsUsername() {
+        // given
+        User user = User.builder().userId(1L).username("oldUsername").build();
+        UpdateUsernameRequestDto requestDto = new UpdateUsernameRequestDto("existUsername");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.existsByUsername(requestDto.username())).thenReturn(true);
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> userService.updateUsername(user.getUserId(), requestDto));
+
+        assertEquals(DUPLICATED_USERNAME, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("username 수정 실패 - 이전과 같은 닉네임")
+    void updateUsernameFailedNotNewUsername() {
+        // given
+        User user = User.builder().userId(1L).username("oldUsername").build();
+        UpdateUsernameRequestDto requestDto = new UpdateUsernameRequestDto("oldUsername");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> userService.updateUsername(user.getUserId(), requestDto));
+
+        assertEquals(SAME_USERNAME, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("비밀번호 수정 성공")
+    void updateUserPasswordSuccess() {
+        // given
+        User user = User.builder().userId(1L).password("encodedOldPassword").build();
+        String encodedNewPassword = "encodedNewPassword";
+        UpdateUserPasswordRequestDto requestDto =
+                new UpdateUserPasswordRequestDto("oldPassword", "newPassword");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(requestDto.oldPassword(), user.getPassword()))
+                .thenReturn(true);
+        when(passwordEncoder.encode(requestDto.rawPassword()))
+                .thenReturn(encodedNewPassword);
+
+        // when
+        User updatedUser = userService.updateUserPassword(user.getUserId(), requestDto);
+
+        // then
+        assertNotNull(updatedUser);
+        assertEquals(encodedNewPassword, updatedUser.getPassword());
+    }
+
+    @Test
+    @DisplayName("비밀번호 수정 실패 - 비밀번호가 일치하지 않음")
+    void updateUserPasswordFailedInvalidOldPassword() {
+        // given
+        User user = User.builder().userId(1L).password("encodedOldPassword").build();
+        String encodedNewPassword = "encodedNewPassword";
+        UpdateUserPasswordRequestDto requestDto =
+                new UpdateUserPasswordRequestDto("wrongPassword", "newPassword");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(requestDto.oldPassword(), user.getPassword()))
+                .thenReturn(false);
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> userService.updateUserPassword(user.getUserId(), requestDto));
+
+        assertEquals(INVALID_OLD_PASSWORD, exception.getErrorCode());
+    }
+
 
     private UserSignUpRequestDto createTestRequest() {
         return new UserSignUpRequestDto("newUser", "password", "newNickname", "new@email.com");
