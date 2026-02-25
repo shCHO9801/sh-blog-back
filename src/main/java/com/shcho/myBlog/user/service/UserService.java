@@ -93,8 +93,11 @@ public class UserService {
 
         String newUsername = requestDto.username().trim();
 
-        if (!newUsername.equals(user.getUsername()) &&
-                userRepository.existsByUsername(newUsername)) {
+        if(newUsername.equals(user.getUsername())) {
+            throw new CustomException(SAME_USERNAME);
+        }
+
+        if (userRepository.existsByUsername(newUsername)) {
             throw new CustomException(DUPLICATED_USERNAME);
         }
 
@@ -129,8 +132,10 @@ public class UserService {
 
         String newNickname = requestDto.nickname().trim();
 
-        if (!newNickname.equals(user.getNickname()) &&
-                userRepository.existsByNickname(newNickname)) {
+        if(newNickname.equals(user.getNickname())) {
+            throw new CustomException(SAME_NICKNAME);
+        }
+        if (userRepository.existsByNickname(newNickname)) {
             throw new CustomException(DUPLICATED_NICKNAME);
         }
 

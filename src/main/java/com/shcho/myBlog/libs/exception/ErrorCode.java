@@ -41,6 +41,8 @@ public enum ErrorCode {
     DUPLICATED_EMAIL(409, "USER_004", "이미 사용 중인 이메일입니다."),
     DUPLICATED_NICKNAME(409, "USER_005", "이미 사용 중인 닉네임입니다."),
     DUPLICATED_CATEGORY_NAME(409, "CATEGORY_001", "이미 사용 중인 카테고리명 입니다."),
+    SAME_USERNAME(409, "USER_006", "이전의 사용하던 아이디와 같습니다."),
+    SAME_NICKNAME(409, "USER_007", "이전에 사용하던 닉네임과 같습니다."),
 
     /* 500 INTERNAL_SERVER_ERROR */
     INTERNAL_SERVER_ERROR(500, "COMMON_500", "서버 오류가 발생했습니다."),
