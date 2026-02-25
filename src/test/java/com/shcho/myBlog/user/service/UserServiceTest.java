@@ -324,7 +324,6 @@ class UserServiceTest {
     void updateUserPasswordFailedInvalidOldPassword() {
         // given
         User user = User.builder().userId(1L).password("encodedOldPassword").build();
-        String encodedNewPassword = "encodedNewPassword";
         UpdateUserPasswordRequestDto requestDto =
                 new UpdateUserPasswordRequestDto("wrongPassword", "newPassword");
 
