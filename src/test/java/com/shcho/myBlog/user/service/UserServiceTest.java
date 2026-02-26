@@ -1,12 +1,10 @@
 package com.shcho.myBlog.user.service;
 
 import com.shcho.myBlog.category.repository.CategoryRepository;
+import com.shcho.myBlog.common.service.MinioService;
 import com.shcho.myBlog.common.util.JwtProvider;
 import com.shcho.myBlog.libs.exception.CustomException;
-import com.shcho.myBlog.user.dto.UpdateUserPasswordRequestDto;
-import com.shcho.myBlog.user.dto.UpdateUsernameRequestDto;
-import com.shcho.myBlog.user.dto.UserSignInRequestDto;
-import com.shcho.myBlog.user.dto.UserSignUpRequestDto;
+import com.shcho.myBlog.user.dto.*;
 import com.shcho.myBlog.user.entity.User;
 import com.shcho.myBlog.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -17,9 +15,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Optional;
 
+import static com.shcho.myBlog.common.entity.UploadType.PROFILE_IMAGE;
 import static com.shcho.myBlog.libs.exception.ErrorCode.*;
 import static com.shcho.myBlog.user.entity.Role.USER;
 import static org.junit.jupiter.api.Assertions.*;
@@ -37,6 +37,8 @@ class UserServiceTest {
     private JwtProvider jwtProvider;
     @Mock
     private CategoryRepository categoryRepository;
+    @Mock
+    private MinioService minioService;
     @InjectMocks
     private UserService userService;
 
@@ -260,7 +262,7 @@ class UserServiceTest {
 
         // then
         assertNotNull(updatedUser);
-        assertEquals(updatedUser.getUsername(), user.getUsername());
+        assertEquals("newUsername", updatedUser.getUsername());
     }
 
     @Test
@@ -337,6 +339,199 @@ class UserServiceTest {
         assertEquals(INVALID_OLD_PASSWORD, exception.getErrorCode());
     }
 
+    @Test
+    @DisplayName("닉네임 수정 성공")
+    void UpdateUserNicknameSuccess() {
+        // given
+        User user = User.builder().userId(1L).nickname("oldNickname").build();
+
+        UpdateUserNicknameRequestDto requestDto =
+                new UpdateUserNicknameRequestDto("newNickname");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.existsByNickname(requestDto.nickname()))
+                .thenReturn(false);
+
+        // when
+        User updatedUser = userService.updateUserNickname(user.getUserId(), requestDto);
+
+        // then
+        assertNotNull(updatedUser);
+        assertEquals("newNickname", updatedUser.getNickname());
+    }
+
+    @Test
+    @DisplayName("닉네임 수정 실패 - 이전과 동일한 닉네임")
+    void UpdateUserNicknameFailedSameNickname() {
+        // given
+        User user = User.builder().userId(1L).nickname("oldNickname").build();
+
+        UpdateUserNicknameRequestDto requestDto =
+                new UpdateUserNicknameRequestDto("oldNickname");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> userService.updateUserNickname(user.getUserId(), requestDto));
+        assertEquals(SAME_NICKNAME, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("닉네임 수정 실패 - 닉네임 중복")
+    void UpdateUserNicknameFailedDuplicatedNickname() {
+        // given
+        User user = User.builder().userId(1L).nickname("oldNickname").build();
+
+        UpdateUserNicknameRequestDto requestDto =
+                new UpdateUserNicknameRequestDto("existsNickname");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.existsByNickname(requestDto.nickname()))
+                .thenReturn(true);
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> userService.updateUserNickname(user.getUserId(), requestDto));
+        assertEquals(DUPLICATED_NICKNAME, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("이메일 수정 성공")
+    void UpdateUserEmailSuccess() {
+        // given
+        User user = User.builder().userId(1L).email("oldEmail").build();
+
+        UpdateUserEmailRequestDto requestDto =
+                new UpdateUserEmailRequestDto("newEmail");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.existsByEmail(requestDto.email()))
+                .thenReturn(false);
+
+        // when
+        User updatedUser = userService.updateUserEmail(user.getUserId(), requestDto);
+
+        // then
+        assertNotNull(updatedUser);
+        assertEquals("newEmail", updatedUser.getEmail());
+    }
+
+    @Test
+    @DisplayName("이메일 수정 실패 - 이전과 동일한 이메일")
+    void UpdateUserEmailFailedSameEmail() {
+        // given
+        User user = User.builder().userId(1L).email("oldEmail").build();
+
+        UpdateUserEmailRequestDto requestDto =
+                new UpdateUserEmailRequestDto("oldEmail");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> userService.updateUserEmail(user.getUserId(), requestDto));
+        assertEquals(SAME_EMAIL, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("이메일 수정 실패 - 이메일 중복")
+    void UpdateUserEmailFailedDuplicatedEmail() {
+        // given
+        User user = User.builder().userId(1L).email("oldEmail").build();
+
+        UpdateUserEmailRequestDto requestDto =
+                new UpdateUserEmailRequestDto("existsEmail");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.existsByEmail(requestDto.email()))
+                .thenReturn(true);
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> userService.updateUserEmail(user.getUserId(), requestDto));
+        assertEquals(DUPLICATED_EMAIL, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("프로필 이미지 수정 성공 - 기존 이미지 없음")
+    void UpdateUserProfileImageSuccessNoOldImage() {
+        // given
+        MultipartFile file = mock(MultipartFile.class);
+
+        User user = User.builder().userId(1L).profileImageUrl(null).build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(minioService.upload(user.getUserId(), file, PROFILE_IMAGE))
+                .thenReturn("https://minio/new.png");
+
+        // when
+        User updatedUser = userService.updateUserProfileImage(user.getUserId(), file);
+
+        // then
+        assertNotNull(updatedUser);
+        assertEquals("https://minio/new.png", updatedUser.getProfileImageUrl());
+
+        verify(minioService).upload(user.getUserId(), file, PROFILE_IMAGE);
+        verify(minioService, never()).extractObjectNameFromUrl(anyString());
+        verify(minioService, never()).deleteObject(anyString());
+    }
+
+    @Test
+    @DisplayName("프로필 이미지 수정 성공 - 기존 이미지 삭제")
+    void UpdateUserProfileSuccessWithOldImage() {
+        // given
+        MultipartFile file = mock(MultipartFile.class);
+
+        String oldImageUrl = "https://minio/bucket/users/1/profile/old.png";
+        String oldObjectName = "users/1/profile/old.png";
+
+        User user = User.builder()
+                .userId(1L).profileImageUrl(oldImageUrl)
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(minioService.upload(user.getUserId(), file, PROFILE_IMAGE))
+                .thenReturn("https://minio/new.png");
+        when(minioService.extractObjectNameFromUrl(oldImageUrl))
+                .thenReturn(oldObjectName);
+
+        // when
+        User updatedUser = userService.updateUserProfileImage(user.getUserId(), file);
+
+        // then
+        assertEquals("https://minio/new.png", updatedUser.getProfileImageUrl());
+
+        verify(minioService).upload(user.getUserId(), file, PROFILE_IMAGE);
+        verify(minioService).extractObjectNameFromUrl(oldImageUrl);
+        verify(minioService).deleteObject(oldObjectName);
+    }
+
+    @Test
+    @DisplayName("프로필 이미지 삭제 성공")
+    void DeleteUserProfileImageSuccess() {
+        // given
+        String oldImageUrl = "https://minio/bucket/users/1/profile/old.png";
+        String oldObjectName = "users/1/profile/old.png";
+
+        User user = User.builder()
+                .userId(1L).profileImageUrl(oldImageUrl)
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(minioService.extractObjectNameFromUrl(oldImageUrl))
+                .thenReturn(oldObjectName);
+
+        // when
+        User updatedUser = userService.deleteUserProfileImage(user.getUserId());
+
+        // then
+        assertNotNull(updatedUser);
+        assertNull(updatedUser.getProfileImageUrl());
+
+        verify(minioService).extractObjectNameFromUrl(oldImageUrl);
+        verify(minioService).deleteObject(oldObjectName);
+    }
 
     private UserSignUpRequestDto createTestRequest() {
         return new UserSignUpRequestDto("newUser", "password", "newNickname", "new@email.com");
