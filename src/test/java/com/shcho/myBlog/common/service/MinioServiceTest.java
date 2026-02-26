@@ -57,6 +57,7 @@ class MinioServiceTest {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getSize()).thenReturn(10L * 1024 * 1024 + 1);
+        when(file.getOriginalFilename()).thenReturn("image.jpg");
 
         // when & then
         CustomException exception = assertThrows(CustomException.class,

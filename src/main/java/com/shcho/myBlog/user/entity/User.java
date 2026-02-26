@@ -68,6 +68,8 @@ public class User extends BaseEntity {
         this.profileImageUrl = profileImageUrl;
     }
 
+    public void deleteProfileImageUrl() { this.profileImageUrl = null; }
+
     public static User of(String username, String encodedPassword, String nickname, String email) {
         return User.builder()
                 .username(username)

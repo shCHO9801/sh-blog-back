@@ -18,8 +18,7 @@ import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.shcho.myBlog.common.entity.UploadType.ATTACHMENT;
-import static com.shcho.myBlog.common.entity.UploadType.IMAGE;
+import static com.shcho.myBlog.common.entity.UploadType.*;
 import static com.shcho.myBlog.libs.exception.ErrorCode.*;
 
 @Service
@@ -38,9 +37,11 @@ public class MinioService {
 
     private static final long IMAGE_MAX_SIZE = 10L * 1024 * 1024;
     private static final long ATTACH_MAX_SIZE = 50L * 1024 * 1024;
+    private static final long PROFILE_MAX_SIZE = 2L * 1024 * 1024;
 
     private static final Set<String> IMAGE_EXT = Set.of("jpg", "jpeg", "png", "gif", "webp");
     private static final Set<String> ATTACH_EXT = Set.of("pdf", "zip", "txt", "md");
+    private static final Set<String> PROFILE_EXT = Set.of("jpg", "jpeg", "png", "webp");
 
     public String upload(Long userId, MultipartFile file, UploadType type) {
         validateFile(file, type);
@@ -65,6 +66,11 @@ public class MinioService {
             );
 
             String url = buildFileUrl(objectName);
+
+            if(type == PROFILE_IMAGE) {
+                return url;
+            }
+
             Long fid = uploadFileService.saveTemp(userId, type, objectName, url);
             return uploadFileService.appendFid(url, fid);
         } catch (Exception e) {
@@ -94,21 +100,21 @@ public class MinioService {
         }
 
         long size = file.getSize();
-
-        if (type == IMAGE && size > IMAGE_MAX_SIZE) {
-            throw new CustomException(FILE_TOO_LARGE);
-        }
-        if (type == ATTACHMENT && size > ATTACH_MAX_SIZE) {
-            throw new CustomException(FILE_TOO_LARGE);
-        }
-
         String ext = extractExt(file.getOriginalFilename());
 
-        if (type == IMAGE && !IMAGE_EXT.contains(ext)) {
-            throw new CustomException(INVALID_FILE_EXTENSION);
+        if (type == IMAGE) {
+            if (size > IMAGE_MAX_SIZE) throw new CustomException(FILE_TOO_LARGE);
+            if (!IMAGE_EXT.contains(ext)) throw new CustomException(INVALID_FILE_EXTENSION);
         }
-        if (type == ATTACHMENT && !ATTACH_EXT.contains(ext)) {
-            throw new CustomException(INVALID_FILE_EXTENSION);
+
+        if (type == ATTACHMENT) {
+            if (size > ATTACH_MAX_SIZE) throw new CustomException(FILE_TOO_LARGE);
+            if (!ATTACH_EXT.contains(ext)) throw new CustomException(INVALID_FILE_EXTENSION);
+        }
+
+        if (type == PROFILE_IMAGE) {
+            if (size > PROFILE_MAX_SIZE) throw new CustomException(FILE_TOO_LARGE);
+            if (!PROFILE_EXT.contains(ext)) throw new CustomException(INVALID_FILE_EXTENSION);
         }
     }
 
@@ -127,9 +133,13 @@ public class MinioService {
         LocalDate now = LocalDate.now();
         String yyyy = String.valueOf(now.getYear());
         String mm = String.format("%02d", now.getMonthValue());
+        String uuid = UUID.randomUUID().toString().replace("-", "");
+
+        if (type == UploadType.PROFILE_IMAGE) {
+            return "users/" + userId + "/profile/" + yyyy + "/" + mm + "/" + uuid + "." + ext;
+        }
 
         String folder = (type == IMAGE) ? "images" : "attachments";
-        String uuid = UUID.randomUUID().toString().replace("-", "");
 
         return "users/" + userId + "/" + folder + "/" + yyyy + "/" + mm + "/" + uuid + "." + ext;
     }
@@ -149,5 +159,15 @@ public class MinioService {
             sb.append(URLEncoder.encode(parts[i], StandardCharsets.UTF_8));
         }
         return sb.toString();
+    }
+
+    public String extractObjectNameFromUrl(String fileUrl) {
+        if(fileUrl == null || fileUrl.isBlank()) return null;
+
+        String marker = "/" + bucket + "/";
+        int idx = fileUrl.indexOf(marker);
+        if (idx < 0) return null;
+
+        return fileUrl.substring(idx + marker.length());
     }
 }

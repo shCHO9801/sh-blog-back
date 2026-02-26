@@ -20,7 +20,8 @@ public enum ErrorCode {
 
     /* 401 UNAUTHORIZED */
     INVALID_USERNAME_OR_PASSWORD(401, "AUTH_001", "아이디 또는 비밀번호가 올바르지 않습니다."),
-    AUTH_REQUIRED(401, "AUTH_002", "인증이 필요합니다."),
+    AUTH_REQUIRED(401, "USER_002", "인증이 필요합니다."),
+    INVALID_OLD_PASSWORD(401, "USER_006", "이전 비밀번호가 일치하지 않습니다."),
 
     /* 403 FORBIDDEN */
     CATEGORY_FORBIDDEN(403, "CATEGORY_003", "해당 카테고리에 대한 권한이 없습니다."),
@@ -40,6 +41,9 @@ public enum ErrorCode {
     DUPLICATED_EMAIL(409, "USER_004", "이미 사용 중인 이메일입니다."),
     DUPLICATED_NICKNAME(409, "USER_005", "이미 사용 중인 닉네임입니다."),
     DUPLICATED_CATEGORY_NAME(409, "CATEGORY_001", "이미 사용 중인 카테고리명 입니다."),
+    SAME_USERNAME(409, "USER_006", "이전의 사용하던 아이디와 같습니다."),
+    SAME_NICKNAME(409, "USER_007", "이전에 사용하던 닉네임과 같습니다."),
+    SAME_EMAIL(409, "USER_008", "이전에 사용하던 이메일과 같습니다."),
 
     /* 500 INTERNAL_SERVER_ERROR */
     INTERNAL_SERVER_ERROR(500, "COMMON_500", "서버 오류가 발생했습니다."),
