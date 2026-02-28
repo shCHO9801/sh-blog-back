@@ -29,7 +29,7 @@ public class CategoryController {
         return ResponseEntity.ok(CreateCategoryResponseDto.from(newCategory));
     }
 
-    @GetMapping("/my")
+    @GetMapping("/me")
     public ResponseEntity<List<CategoryTreeResponseDto>> getMyCategories(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -39,7 +39,7 @@ public class CategoryController {
         return ResponseEntity.ok(myCategoryTree);
     }
 
-    @GetMapping("/my/roots")
+    @GetMapping("/me/roots")
     public ResponseEntity<List<CategoryResponseDto>> getMyRootCategories(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -51,7 +51,7 @@ public class CategoryController {
         return ResponseEntity.ok(rootCategoryList);
     }
 
-    @GetMapping("/my/{categoryId}")
+    @GetMapping("/me/{categoryId}")
     public ResponseEntity<CategoryResponseDto> getMyCategoryByCategoryId(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long categoryId
@@ -70,7 +70,7 @@ public class CategoryController {
         return ResponseEntity.ok(getBlogCategory);
     }
 
-    @PatchMapping("/my/{categoryId}")
+    @PatchMapping("/me/{categoryId}")
     public ResponseEntity<CategoryResponseDto> updateMyCategory(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long categoryId,
@@ -80,7 +80,7 @@ public class CategoryController {
         return ResponseEntity.ok(CategoryResponseDto.of(updatedCategory));
     }
 
-    @DeleteMapping(("/my/{categoryId}"))
+    @DeleteMapping(("/me/{categoryId}"))
     public ResponseEntity<DeleteCategoryResponseDto> deleteMyCategory(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long categoryId

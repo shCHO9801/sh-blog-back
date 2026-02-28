@@ -83,7 +83,7 @@ public class PostController {
         return ResponseEntity.ok(getRecentPostThumbnailsByNickname);
     }
 
-    @GetMapping("/my")
+    @GetMapping("/me")
     public ResponseEntity<PagedResponseDto<PostThumbnailResponseDto>> getMyPosts(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Boolean publicPost,
@@ -94,7 +94,7 @@ public class PostController {
         return ResponseEntity.ok(PagedResponseDto.from(getMyAllPosts));
     }
 
-    @GetMapping("/my/posts/{postId}")
+    @GetMapping("/me/posts/{postId}")
     public ResponseEntity<PostResponseDto> getMyPostByPostId(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long postId
@@ -103,7 +103,7 @@ public class PostController {
         return ResponseEntity.ok(PostResponseDto.from(post));
     }
 
-    @PatchMapping("/my/posts/{postId}/title")
+    @PatchMapping("/me/posts/{postId}/title")
     public ResponseEntity<PostResponseDto> updateMyPostTitle(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long postId,
@@ -113,7 +113,7 @@ public class PostController {
         return ResponseEntity.ok(PostResponseDto.from(post));
     }
 
-    @PatchMapping("/my/posts/{postId}/content")
+    @PatchMapping("/me/posts/{postId}/content")
     public ResponseEntity<PostResponseDto> updateMyPostContent(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long postId,
@@ -123,7 +123,7 @@ public class PostController {
         return ResponseEntity.ok(PostResponseDto.from(post));
     }
 
-    @PatchMapping("/my/posts/{postId}/category")
+    @PatchMapping("/me/posts/{postId}/category")
     public ResponseEntity<PostResponseDto> updateMyPostCategory(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long postId,
@@ -133,7 +133,7 @@ public class PostController {
         return ResponseEntity.ok(PostResponseDto.from(post));
     }
 
-    @PatchMapping("/my/posts/{postId}/public")
+    @PatchMapping("/me/posts/{postId}/public")
     public ResponseEntity<PostResponseDto> updateMyPostPublic(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long postId,
@@ -143,7 +143,7 @@ public class PostController {
         return ResponseEntity.ok(PostResponseDto.from(post));
     }
 
-    @DeleteMapping("/my/posts/{postId}")
+    @DeleteMapping("/me/posts/{postId}")
     public ResponseEntity<DeletePostResponseDto> deleteMyPost(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long postId
